@@ -15,6 +15,10 @@ Run the following shell script to build PicoRuby:
 
 ```sh
 $ git clone https://github.com/picoruby/R2P2-ESP32.git
+
+$ cd R2P2-ESP32
+$ ./components/picoruby-esp32/install.sh
+$ idf.py set-target esp32c3 # Please specify the target you are using.
 ```
 
 ### Build
