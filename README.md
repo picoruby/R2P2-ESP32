@@ -1,6 +1,6 @@
 # R2P2-ESP32
 
-This project runs [PicoRuby](https://github.com/picoruby/picoruby) on ESP32 and serves as an example of using [picoruby-esp32](https://github.com/yuuu/picoruby-esp32).  
+This project runs [PicoRuby](https://github.com/picoruby/picoruby) on ESP32 and serves as an example of using [picoruby-esp32](https://github.com/picoruby/picoruby-esp32).  
 Currently, **it has only been tested on the [M5Stamp C3 Mate](https://docs.m5stack.com/ja/core/stamp_c3).**
 
 ## Getting Started
