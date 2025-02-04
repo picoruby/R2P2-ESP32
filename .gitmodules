@@ -1,0 +1,3 @@
+[submodule "components/picoruby-esp32"]
+	path = components/picoruby-esp32
+	url = https://github.com/picoruby/picoruby-esp32.git
