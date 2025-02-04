@@ -1,4 +1,4 @@
-# espicoruby
+# R2P2-ESP32
 
 This project runs [PicoRuby](https://github.com/picoruby/picoruby) on ESP32 and serves as an example of using [picoruby-esp32](https://github.com/yuuu/picoruby-esp32).  
 Currently, **it has only been tested on the [M5Stamp C3 Mate](https://docs.m5stack.com/ja/core/stamp_c3).**
@@ -14,7 +14,7 @@ Set up your development environment using ESP-IDF by referring to [this page](ht
 Run the following shell script to build PicoRuby:
 
 ```sh
-$ git clone https://github.com/yuuu/espicoruby.git
+$ git clone https://github.com/picoruby/R2P2-ESP32.git
 ```
 
 ### Build
@@ -47,4 +47,4 @@ Currently, this project is tested in the following environment only:
 
 ## License
 
-[espicoruby](https://github.com/yuuu/espicoruby) is released under the [MIT License](https://github.com/yuuu/espicoruby/blob/main/LICENSE).
+[R2P2-ESP32](https://github.com/picoruby/R2P2-ESP32.git) is released under the [MIT License](https://github.com/picoruby/R2P2-ESP32/blob/master/LICENSE).
