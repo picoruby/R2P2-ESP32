@@ -18,8 +18,15 @@ $ git clone https://github.com/picoruby/R2P2-ESP32.git
 
 $ cd R2P2-ESP32
 $ ./components/picoruby-esp32/install.sh
-$ idf.py set-target esp32c3 # Please specify the target you are using.
 ```
+
+If you want to use several files on a device, store them under `./storage/home` .
+The file named `app.mrb` or `app.rb` is automatically executed after device startup.
+
+#### Looking for Contributors
+
+I would like to enable the device to be recognized as a USB Mass Storage Class when connected to a PC, allowing files to be written via drag-and-drop, similar to R2P2.  
+If you are interested in contributing, feel free to submit a pull request or open an issue!
 
 ### Build
 
@@ -47,6 +54,7 @@ Currently, this project is tested in the following environment only:
 - **Build OS**:
   - macOS
 - **Device**:
+  - ESP32-DevKitC(esp32)
   - M5Stamp C3 Mate(esp32c3)
 
 ## License
