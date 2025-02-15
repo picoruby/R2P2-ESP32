@@ -1,7 +1,6 @@
 # R2P2-ESP32
 
 This project runs [PicoRuby](https://github.com/picoruby/picoruby) on ESP32 and serves as an example of using [picoruby-esp32](https://github.com/picoruby/picoruby-esp32).  
-Currently, **it has only been tested on the [M5Stamp C3 Mate](https://docs.m5stack.com/ja/core/stamp_c3).**
 
 ## Getting Started
 
@@ -15,9 +14,6 @@ Run the following shell script to build PicoRuby:
 
 ```sh
 $ git clone https://github.com/picoruby/R2P2-ESP32.git
-
-$ cd R2P2-ESP32
-$ ./components/picoruby-esp32/install.sh
 ```
 
 If you want to use several files on a device, store them under `./storage/home` .
@@ -33,6 +29,7 @@ If you are interested in contributing, feel free to submit a pull request or ope
 Build the project using the `idf.py` command.
 
 ```sh
+$ cd R2P2-ESP32
 $ . $(YOUR_ESP_IDF_PATH)/export.sh
 $ idf.py set-target $(YOUR_ESP_TARGET) # example: idf.py set-target esp32c3
 $ idf.py build
