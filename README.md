@@ -1,6 +1,8 @@
 # R2P2-ESP32
 
-This project runs [PicoRuby](https://github.com/picoruby/picoruby) on ESP32 and serves as an example of using [picoruby-esp32](https://github.com/picoruby/picoruby-esp32).  
+This project runs [R2P2](https://github.com/picoruby/R2P2) (Ruby Rapid Portable Platform) on ESP32.
+It uses [picoruby-esp32](https://github.com/picoruby/picoruby-esp32), a component to run [PicoRuby](https://github.com/picoruby/picoruby) on ESP32.
+
 
 ## Getting Started
 
@@ -31,8 +33,13 @@ Build the project using the `idf.py` command.
 ```sh
 $ cd R2P2-ESP32
 $ . $(YOUR_ESP_IDF_PATH)/export.sh
-$ idf.py set-target $(YOUR_ESP_TARGET) # example: idf.py set-target esp32c3
-$ idf.py build
+
+# Setup(First time only)
+$ rake setup_esp32   # if you use esp32
+$ rake setup_esp32c3 # if you use esp32c3
+
+# Build
+$ rake build
 ```
 
 ### Flash and Monitor
@@ -40,8 +47,18 @@ $ idf.py build
 Flash the firmware and monitor the output using the `idf.py` command. PicoRuby Shell will start.
 
 ```sh
-$ idf.py flash
-$ idf.py monitor
+# Flash
+$ rake flash
+
+# Monitor
+$ rake monitor
+```
+
+If you want to run `build` -> `flash` -> `monitor` , you can use `rake` .
+
+```sh
+# Build -> Flash -> Monitor
+$ rake
 ```
 
 ## Supported Environment
@@ -49,6 +66,7 @@ $ idf.py monitor
 Currently, this project is tested in the following environment only:
 
 - **Build OS**:
+  - Linux
   - macOS
 - **Device**:
   - ESP32-DevKitC(esp32)
