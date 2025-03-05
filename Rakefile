@@ -15,7 +15,6 @@ task :default => :all
 task :all => %w[build flash monitor]
 
 task :setup do
-  sh "git submodule update --init"
   FileUtils.cd MRUBY_ROOT do
     sh "bundle install"
     sh "rake"
