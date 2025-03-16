@@ -38,6 +38,7 @@ $ . $(YOUR_ESP_IDF_PATH)/export.sh
 $ rake setup_esp32   # if you use esp32
 $ rake setup_esp32s3 # if you use esp32s3
 $ rake setup_esp32c3 # if you use esp32c3
+$ rake setup_esp32c6 # if you use esp32c6
 
 # Build
 $ rake build
@@ -72,6 +73,7 @@ Currently, this project is tested in the following environment only:
 - **Device**:
   - ESP32-DevKitC(esp32)
   - ESP32-S3-DevKitC(esp32s3)
+  - ESP32-C6-DevKitC(esp32c6)
   - M5Stamp C3 Mate(esp32c3)
 
 ## License
