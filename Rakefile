@@ -35,6 +35,10 @@ task :flash do
   sh "idf.py flash"
 end
 
+task :flash_storage do
+  sh "esptool.py -b 460800 write_flash 0x110000 build/storage.bin"
+end
+
 task :monitor do
   sh "idf.py monitor"
 end
