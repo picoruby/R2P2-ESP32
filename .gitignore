@@ -5,3 +5,4 @@ dependencies.lock
 .env
 storage/home/*
 !storage/home/.keep
+.vscode/*
