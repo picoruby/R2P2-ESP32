@@ -15,7 +15,7 @@ Set up your development environment using ESP-IDF by referring to [this page](ht
 Run the following shell script to build PicoRuby:
 
 ```sh
-$ git clone https://github.com/picoruby/R2P2-ESP32.git
+$ git clone --recursive https://github.com/picoruby/R2P2-ESP32.git
 ```
 
 If you want to use several files on a device, store them under `./storage/home` .
