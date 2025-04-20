@@ -1,0 +1,35 @@
+name: build R2P2-ESP32
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        target: [esp32, esp32s3, esp32c3, esp32c6]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Bundle install
+        run: bundle install
+        working-directory: ./components/picoruby-esp32/picoruby
+      - name: Rake
+        run: rake
+        working-directory: ./components/picoruby-esp32/picoruby
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.1
+          target: ${{ matrix.target }}
+          path: '.'
