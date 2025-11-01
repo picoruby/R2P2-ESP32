@@ -44,14 +44,14 @@ end
 
 desc "Erase factory partition and flash firmware binary"
 task :flash_factory do
-  sh "esptool.py -b 460800 erase_region 0x10000 0x100000"
+  sh "esptool.py -b 460800 erase_region 0x10000 0x200000"
   sh "esptool.py -b 460800 write_flash 0x10000 build/R2P2-ESP32.bin"
 end
 
 desc "Erase storage partition and flash storage binary"
 task :flash_storage do
-  sh "esptool.py -b 460800 erase_region 0x110000 0x100000"
-  sh "esptool.py -b 460800 write_flash 0x110000 build/storage.bin"
+  sh "esptool.py -b 460800 erase_region 0x210000 0x100000"
+  sh "esptool.py -b 460800 write_flash 0x210000 build/storage.bin"
 end
 
 desc "Monitor ESP32 serial output"
