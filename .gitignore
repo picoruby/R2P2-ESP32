@@ -6,3 +6,4 @@ dependencies.lock
 storage/home/*
 !storage/home/.keep
 .vscode/*
+.cache
