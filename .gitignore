@@ -3,6 +3,7 @@ sdkconfig
 sdkconfig.old
 dependencies.lock
 .env
+.envrc
 storage/home/*
 !storage/home/.keep
 .vscode/*
