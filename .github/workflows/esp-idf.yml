@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         target: [esp32, esp32s3, esp32c3, esp32c6]
+        vm: [mrubyc, mruby]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -33,3 +34,4 @@ jobs:
           esp_idf_version: v5.4.1
           target: ${{ matrix.target }}
           path: '.'
+          command: idf.py build -DPICORB_VM=#{matrix.vm}
