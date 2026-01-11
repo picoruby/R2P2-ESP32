@@ -1,6 +1,6 @@
 idf_component_register(
   SRCS "main.c"
-  REQUIRES picoruby-esp32
+  REQUIRES picoruby-esp32 esp32_uart_file_transfer
   PRIV_REQUIRES spi_flash
   INCLUDE_DIRS ""
 )

@@ -1,3 +1,6 @@
 [submodule "components/picoruby-esp32"]
 	path = components/picoruby-esp32
 	url = https://github.com/picoruby/picoruby-esp32.git
+[submodule "components/esp32_uart_file_transfer"]
+	path = components/esp32_uart_file_transfer
+	url = git@github.com:kishima/esp32_uart_file_transfer.git
