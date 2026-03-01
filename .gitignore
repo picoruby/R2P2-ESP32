@@ -6,5 +6,7 @@ dependencies.lock
 .envrc
 storage/home/*
 !storage/home/.keep
+storage/etc/*
+!storage/etc/.keep
 .vscode/*
 .cache
