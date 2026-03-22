@@ -10,3 +10,4 @@ storage/etc/*
 !storage/etc/.keep
 .vscode/*
 .cache
+managed_components/*
