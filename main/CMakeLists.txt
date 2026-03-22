@@ -6,4 +6,4 @@ idf_component_register(
 )
 
 set(image ../storage)
-fatfs_create_rawflash_image(storage ${image} FLASH_IN_PROJECT PRESERVE_TIME)
+littlefs_create_partition_image(storage ${image} FLASH_IN_PROJECT)
