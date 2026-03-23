@@ -61,6 +61,8 @@ $ rake setup_esp32   # if you use esp32
 $ rake setup_esp32s3 # if you use esp32s3
 $ rake setup_esp32c3 # if you use esp32c3
 $ rake setup_esp32c6 # if you use esp32c6
+$ rake setup_esp32h2 # if you use esp32h2
+$ rake setup_esp32p4 # if you use esp32p4
 
 # Build
 $ rake build
