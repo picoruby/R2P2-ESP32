@@ -12,12 +12,36 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # ESP32: FemtoRuby
           - target: esp32
             vm_flag: mrubyc
             sdkconfig_defaults: sdkconfig.defaults
+          # ESP32-C3: FemtoRuby
           - target: esp32c3
             vm_flag: mrubyc
             sdkconfig_defaults: sdkconfig.defaults
+          # ESP32-C6: PicoRuby
+          - target: esp32c6
+            vm_flag: mruby
+            sdkconfig_defaults: sdkconfig.defaults
+          - target: esp32c6
+            vm_flag: mruby
+            sdkconfig_defaults: "sdkconfig.defaults;sdkconfigs/usb_console"
+          # ESP32-H2: FemtoRuby
+          - target: esp32h2
+            vm_flag: mrubyc
+            sdkconfig_defaults: sdkconfig.defaults
+          - target: esp32h2
+            vm_flag: mrubyc
+            sdkconfig_defaults: "sdkconfig.defaults;sdkconfigs/usb_console"
+          # ESP32-P4: PicoRuby
+          - target: esp32p4
+            vm_flag: mruby
+            sdkconfig_defaults: sdkconfig.defaults
+          - target: esp32p4
+            vm_flag: mruby
+            sdkconfig_defaults: "sdkconfig.defaults;sdkconfigs/usb_console"
+          # ESP32-S3: FemtoRuby and PicoRuby
           - target: esp32s3
             vm_flag: mrubyc
             sdkconfig_defaults: sdkconfig.defaults
