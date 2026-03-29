@@ -25,7 +25,7 @@ task :setup do
   end
 end
 
-%w[esp32 esp32c3 esp32c6 esp32h2 esp32p4 esp32s3].each do |name|
+%w[esp32 esp32s2 esp32s3 esp32c3 esp32c6 esp32h2 esp32p4].each do |name|
   desc "Setup environment for #{name} target"
   task "setup_#{name}" => %w[deep_clean setup] do
     sh "idf.py set-target #{name}"
