@@ -58,6 +58,7 @@ $ . $(YOUR_ESP_IDF_PATH)/export.sh
 
 # Setup(First time only)
 $ rake setup_esp32   # if you use esp32
+$ rake setup_esp32s2 # if you use esp32s2
 $ rake setup_esp32s3 # if you use esp32s3
 $ rake setup_esp32c3 # if you use esp32c3
 $ rake setup_esp32c6 # if you use esp32c6
