@@ -37,7 +37,7 @@ task :build do
   sh "idf.py build"
 end
 
-{ picoruby: :mrubyc, microruby: :mruby }.each do |name, vm|
+{ femtoruby: :mrubyc, picoruby: :mruby }.each do |name, vm|
   namespace name do
     desc "Build the ESP32 project with #{name} VM"
     task :build do
@@ -72,7 +72,7 @@ desc "Clean build artifacts"
 task :clean do
   sh "idf.py clean"
   FileUtils.cd MRUBY_ROOT do
-    %w[xtensa-esp riscv-esp xtensa-esp-microruby riscv-esp-microruby].each do |mruby_config|
+    %w[xtensa-esp-femtoruby riscv-esp-femtoruby xtensa-esp-picoruby riscv-esp-picoruby].each do |mruby_config|
       sh "MRUBY_CONFIG=#{R2P2_ESP32_ROOT}/components/picoruby-esp32/build_config/#{mruby_config}.rb rake clean"
     end
   end
