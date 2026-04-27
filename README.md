@@ -1,7 +1,6 @@
 # R2P2-ESP32
 
-This project runs [R2P2](https://github.com/picoruby/R2P2) (Ruby Rapid Portable Platform) on ESP32.
-It uses [picoruby-esp32](https://github.com/picoruby/picoruby-esp32), a component to run [PicoRuby](https://github.com/picoruby/picoruby) on ESP32.
+This project runs [R2P2](https://github.com/picoruby/R2P2) (Ruby Rapid Portable Platform), a [PicoRuby](https://github.com/picoruby/picoruby) shell, on ESP32.
 
 
 ## Getting Started
