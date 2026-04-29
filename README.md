@@ -25,6 +25,29 @@ The file named `app.mrb` or `app.rb` is automatically executed after device star
 I would like to enable the device to be recognized as a USB Mass Storage Class when connected to a PC, allowing files to be written via drag-and-drop, similar to R2P2.  
 If you are interested in contributing, feel free to submit a pull request or open an issue!
 
+### Hardware-specific Configuration
+
+Some hardware variants require additional configuration via the `SDKCONFIG_DEFAULTS` environment variable.
+Fragment files for each option are provided under `sdkconfigs/`.
+You can combine them as needed by appending fragment file paths separated by semicolons.
+
+Here are some examples:
+
+**When using USB console** (boards without an external USB-to-UART chip):
+
+```sh
+$ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console"
+```
+
+**When using USB console with SPIRAM:**
+
+```sh
+$ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console;sdkconfigs/spiram"
+```
+
+Set the environment variable before running `rake setup_*` and `rake build`.
+If you change `SDKCONFIG_DEFAULTS`, delete the `sdkconfig` file and rebuild from scratch.
+
 ### Build
 
 Build the project using the `idf.py` command.
