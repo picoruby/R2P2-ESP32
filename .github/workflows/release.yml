@@ -2,9 +2,7 @@ name: Release
 
 on:
   push:
-    branches:
-      - production
-      - ci/release-workflow
+    branches: [production]
 
 jobs:
   bump-version:
@@ -22,7 +20,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           tag_prefix: ""
-          release_branches: "production,ci/release-workflow"
+          release_branches: "production"
 
   build:
     needs: bump-version
