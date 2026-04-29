@@ -22,6 +22,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           tag_prefix: ""
+          release_branches: "production,ci/release-workflow"
 
   build:
     needs: bump-version
