@@ -10,7 +10,7 @@ jobs:
   build:
     strategy:
       matrix:
-        target: [esp32, esp32s3, esp32c3, esp32c6]
+        target: [esp32, esp32s2, esp32s3, esp32c3, esp32c6, esp32h2, esp32p4]
         vm: [mrubyc, mruby]
     runs-on: ubuntu-latest
     steps:
@@ -34,4 +34,4 @@ jobs:
           esp_idf_version: v5.4.1
           target: ${{ matrix.target }}
           path: '.'
-          command: idf.py build -DPICORB_VM=#{matrix.vm}
+          command: idf.py build -DPICORB_VM=${{ matrix.vm }}
