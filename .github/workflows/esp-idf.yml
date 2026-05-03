@@ -34,4 +34,4 @@ jobs:
           esp_idf_version: v5.4.1
           target: ${{ matrix.target }}
           path: '.'
-          command: idf.py build -DPICORB_VM=#{matrix.vm}
+          command: idf.py build -DPICORB_VM=${{ matrix.vm }}
