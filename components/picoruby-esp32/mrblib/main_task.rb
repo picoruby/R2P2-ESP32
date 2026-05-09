@@ -15,6 +15,8 @@ begin
 rescue => e
   puts "Not available"
   puts "#{e.message} (#{e.class})"
+rescue Exception => e
+  puts "FATAL: #{e.message} (#{e.class})"
 end
 
 begin

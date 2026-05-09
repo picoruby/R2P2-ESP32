@@ -26,8 +26,11 @@
 #endif
 #endif
 
+#if defined(CONFIG_SPIRAM)
 uint8_t *heap_pool = NULL;
-uint32_t caps = MALLOC_CAP_INTERNAL;
+#else
+uint8_t heap_pool[HEAP_SIZE];
+#endif
 
 #if defined(PICORB_VM_MRUBY)
 mrb_state *global_mrb = NULL;
@@ -55,22 +58,23 @@ setup(void)
   ESP_ERROR_CHECK(ret);
 
 #if defined(CONFIG_SPIRAM)
-  caps = MALLOC_CAP_SPIRAM;
-#endif
-  heap_pool = heap_caps_malloc(HEAP_SIZE, caps);
+  heap_pool = heap_caps_malloc(HEAP_SIZE, MALLOC_CAP_SPIRAM);
   if (!heap_pool) {
     printf("Failed to allocate heap pool\n");
     return;
   }
+#endif
 }
 
 void
 teardown(void)
 {
+#if defined(CONFIG_SPIRAM)
   if (heap_pool) {
     heap_caps_free(heap_pool);
     heap_pool = NULL;
   }
+#endif
 
   nvs_flash_deinit();
 }
@@ -91,6 +95,10 @@ picoruby_esp32(void)
   mrbc_run();
 #elif defined(PICORB_VM_MRUBY)
   mrb_state *mrb = mrb_open_with_custom_alloc(heap_pool, HEAP_SIZE);
+  if (mrb->exc) {
+    mrb_print_error(mrb);
+    mrb->exc = NULL;
+  }
   global_mrb = mrb;
   mrc_irep *irep = mrb_read_irep(mrb, main_task);
   mrc_ccontext *cc = mrc_ccontext_new(mrb);
