@@ -33,10 +33,10 @@ jobs:
             vm_flag: mrubyc
             artifact_suffix: esp32-femtoruby
             sdkconfig_defaults: sdkconfig.defaults
-          - target: esp32
-            vm_name: picoruby
-            vm_flag: mruby
-            artifact_suffix: esp32-picoruby
+          - target: esp32c3
+            vm_name: femtoruby
+            vm_flag: mrubyc
+            artifact_suffix: esp32c3-femtoruby
             sdkconfig_defaults: sdkconfig.defaults
           - target: esp32s3
             vm_name: femtoruby
@@ -47,16 +47,6 @@ jobs:
             vm_name: picoruby
             vm_flag: mruby
             artifact_suffix: esp32s3-picoruby
-            sdkconfig_defaults: sdkconfig.defaults
-          - target: esp32c3
-            vm_name: femtoruby
-            vm_flag: mrubyc
-            artifact_suffix: esp32c3-femtoruby
-            sdkconfig_defaults: sdkconfig.defaults
-          - target: esp32c3
-            vm_name: picoruby
-            vm_flag: mruby
-            artifact_suffix: esp32c3-picoruby
             sdkconfig_defaults: sdkconfig.defaults
           - target: esp32s3
             vm_name: femtoruby
