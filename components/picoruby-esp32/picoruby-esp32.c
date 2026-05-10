@@ -22,7 +22,11 @@
 #if defined(CONFIG_SPIRAM)
 #define HEAP_SIZE (1024 * 1024)
 #else
+#if defined(PICORB_VM_MRUBYC)
 #define HEAP_SIZE (1024 * 100)
+#elif defined(PICORB_VM_MRUBY)
+#define HEAP_SIZE (1024 * 180)
+#endif
 #endif
 #endif
 
