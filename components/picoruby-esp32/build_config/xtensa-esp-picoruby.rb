@@ -24,6 +24,7 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.cc.defines << 'USE_FAT_FLASH_DISK'
   conf.cc.defines << 'NDEBUG'
   conf.cc.defines << 'ESP32_PLATFORM'
+  conf.cc.defines << "CONFIG_ESP_WIFI_ENABLED" unless ENV['CONFIG_ESP_WIFI_ENABLED'].to_s.empty?
 
   if ENV['PICORB_DEBUG']
     conf.cc.defines << 'ESTALLOC_DEBUG'
@@ -42,7 +43,9 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-sprintf'
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-math'
   conf.gem core: 'picoruby-esp32'
-  conf.gembox 'shell'
+  conf.gem core: "picoruby-shell"
+  conf.gem core: "picoruby-picoline"
+  conf.gem core: "picoruby-vim"
 
   # stdlib
   conf.gem core: 'picoruby-rng'
@@ -58,8 +61,11 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem core: 'picoruby-pwm'
 
   # others
-  # conf.gem core: 'picoruby-rmt'
+  conf.gem core: 'picoruby-rmt'
   conf.gem core: 'picoruby-mbedtls'
   conf.gem core: 'picoruby-socket'
-  # conf.gem core: 'picoruby-adafruit_sk6812'
+  conf.gem core: 'picoruby-network'
+  conf.gem core: 'picoruby-net-mqtt'
+  conf.gem core: 'picoruby-net-ntp'
+  conf.gem core: 'picoruby-adafruit_sk6812'
 end
