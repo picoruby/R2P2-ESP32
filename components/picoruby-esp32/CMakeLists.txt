@@ -40,8 +40,9 @@ else()
   )
 endif()
 
-if(CONFIG_ESP_WIFI_ENABLED)
-  list(APPEND ADDITIONAL_DEFINITIONS -DCONFIG_ESP_WIFI_ENABLED)
+if(CONFIG_ESP_WIFI_ENABLED AND DEFINED ENV{USE_WIFI})
+  list(APPEND ADDITIONAL_DEFINITIONS -DUSE_WIFI)
+  set(MRUBY_USE_WIFI $ENV{USE_WIFI})
 endif()
 
 if(DEFINED ENV{HEAP_SIZE})
@@ -104,7 +105,6 @@ idf_component_register(
     esp_hw_support
     spi_flash
     nvs_flash
-    esp_wifi
     esp_psram
     esp_driver_usb_serial_jtag
 )
@@ -124,8 +124,10 @@ set(LIBMRUBY_FILE ${PICORUBY_DIR}/build/${LIBMRUBY_PATH}/lib/libmruby.a)
 set(MRUBY_ENV
   MRUBY_CONFIG=${MRUBY_CONFIG_STRING}
   CONFIG_IDF_TARGET=${CONFIG_IDF_TARGET}
-  CONFIG_ESP_WIFI_ENABLED=${CONFIG_ESP_WIFI_ENABLED}
 )
+if(MRUBY_USE_WIFI)
+  list(APPEND MRUBY_ENV USE_WIFI=${MRUBY_USE_WIFI})
+endif()
 
 # Build PicoRuby
 add_custom_command(
@@ -142,6 +144,9 @@ add_prebuilt_library(
   REQUIRES ${COMPONENT_NAME}
 )
 target_link_libraries(${COMPONENT_LIB} PRIVATE libmruby)
+if(CONFIG_ESP_WIFI_ENABLED AND DEFINED ENV{USE_WIFI})
+  target_link_libraries(${COMPONENT_LIB} PRIVATE idf::esp_wifi)
+endif()
 target_include_directories(
   ${COMPONENT_LIB}
   PRIVATE

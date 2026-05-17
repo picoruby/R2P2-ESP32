@@ -20,7 +20,7 @@ MRuby::CrossBuild.new("esp32-femtoruby") do |conf|
   conf.cc.defines << "ESP32_PLATFORM"
   conf.cc.defines << "PICORB_INT64"
   conf.cc.defines << "NDEBUG"
-  conf.cc.defines << "CONFIG_ESP_WIFI_ENABLED" unless ENV['CONFIG_ESP_WIFI_ENABLED'].to_s.empty?
+  conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
 
   conf.femtoruby(alloc_libc: false)
   conf.gembox 'minimum'
