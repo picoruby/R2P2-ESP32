@@ -110,7 +110,7 @@ picoruby_esp32(void)
   mrb_value task = mrc_create_task(cc, irep, name, mrb_nil_value(), mrb_obj_value(mrb->top_self));
   if (mrb_nil_p(task)) {
     const char *msg = "mrbc_create_task failed\n";
-    hal_write(1, msg, strlen(msg));
+    picorb_hal_write(1, msg, strlen(msg));
   }
   else {
     mrb_task_run(mrb);
