@@ -81,7 +81,7 @@ You will need to set up a development environment if you want to:
 
 ### Prerequisites
 
-Set up your development environment using ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32/get-started/index.html#manual-installation).
+Set up your development environment using ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32/get-started/index.html#manual-installation).
 
 ### Getting the Source
 
@@ -120,8 +120,37 @@ Run the setup task for your target (first time only):
 
 ```sh
 $ cd R2P2-ESP32
-$ . $(YOUR_ESP_IDF_PATH)/export.sh
 
+# Activate ESP-IDF (replace x with your patch version, e.g. 4)
+$ source ~/.espressif/tools/activate_idf_v5.5.x.sh
+```
+
+After activation, add Ruby to PATH using your version manager:
+
+```sh
+# mise:
+$ export PATH="$HOME/.local/share/mise/shims:$PATH"
+# asdf:
+$ export PATH="$HOME/.asdf/shims:$PATH"
+# rbenv:
+$ export PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH"
+```
+
+Set the C compiler (`CC`) and Archiver (`AR`) to the host toolchain.
+ESP-IDF's activation script may override these with cross-compilers.
+
+```sh
+# macOS:
+$ export CC=/usr/bin/cc
+$ export AR=/usr/bin/ar
+# Linux:
+$ export CC=/usr/bin/gcc
+$ export AR=/usr/bin/ar
+```
+
+> **Tip:** You can manage all of the above environment variables in a `.envrc` file using [direnv](https://direnv.net/), so they are applied automatically whenever you enter the project directory.
+
+```sh
 # Setup (first time only)
 $ rake setup_esp32   # if you use esp32
 $ rake setup_esp32c3 # if you use esp32c3
