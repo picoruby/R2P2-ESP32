@@ -81,7 +81,7 @@ You will need to set up a development environment if you want to:
 
 ### Prerequisites
 
-Set up your development environment using ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32/get-started/index.html#manual-installation).
+Set up your development environment using ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#installation). The build has been verified with ESP-IDF v5.5.
 
 ### Getting the Source
 
