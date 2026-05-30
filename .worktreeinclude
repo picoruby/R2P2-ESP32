@@ -1,0 +1,5 @@
+sdkconfig
+.env
+.envrc
+storage/home/
+storage/etc/
