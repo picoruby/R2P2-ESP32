@@ -22,6 +22,10 @@ if(${PICORB_VM} STREQUAL "mruby")
     -DPICORB_ALLOC_ESTALLOC
     -DPICORB_ALLOC_ALIGN=8
     -DPICORB_VM_MRUBY
+    # Must match picoruby-debug/mrbgem.rake: MRB_USE_DEBUG_HOOK changes
+    # sizeof(mrb_state), so every translation unit that includes mruby.h
+    # (incl. the ESP-IDF-compiled port sources here) must agree on it.
+    -DMRB_USE_DEBUG_HOOK
   )
 else()
   file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/build/esp32-femtoruby/mrbgems)

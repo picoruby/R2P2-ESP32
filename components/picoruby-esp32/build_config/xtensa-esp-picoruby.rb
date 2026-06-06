@@ -29,6 +29,10 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   if ENV['PICORB_DEBUG']
     conf.cc.defines << 'ESTALLOC_DEBUG'
     conf.enable_debug
+    # Override -O0 (added by enable_debug) with -Og to keep binary size
+    # within the factory partition while preserving debuggability.
+    conf.compilers.each { |c| c.flags << '-Og' }
+    conf.gem core: 'picoruby-debug'
   end
 
   conf.picoruby
@@ -42,15 +46,15 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-error'
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-sprintf'
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-math'
-  conf.gem core: 'picoruby-esp32'
+  # conf.gem core: 'picoruby-esp32'
   conf.gem core: "picoruby-shell"
   conf.gem core: "picoruby-picoline"
-  conf.gem core: "picoruby-vim"
+  # conf.gem core: "picoruby-vim"
 
   # stdlib
   conf.gem core: 'picoruby-rng'
   conf.gem core: 'picoruby-base64'
-  conf.gem core: 'picoruby-yaml'
+  # conf.gem core: 'picoruby-yaml'
 
   # peripherals
   conf.gem core: 'picoruby-gpio'
@@ -63,9 +67,9 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   # others
   conf.gem core: 'picoruby-rmt'
   conf.gem core: 'picoruby-mbedtls'
-  conf.gem core: 'picoruby-socket'
-  conf.gem core: 'picoruby-network'
-  conf.gem core: 'picoruby-net-mqtt'
-  conf.gem core: 'picoruby-net-ntp'
-  conf.gem core: 'picoruby-adafruit_sk6812'
+  # conf.gem core: 'picoruby-socket'
+  # conf.gem core: 'picoruby-network'
+  # conf.gem core: 'picoruby-net-mqtt'
+  # conf.gem core: 'picoruby-net-ntp'
+  # conf.gem core: 'picoruby-adafruit_sk6812'
 end
