@@ -1,0 +1,23 @@
+# BLE + BTstack host stack sdkconfig fragment (BLE only, no WiFi concurrency)
+
+CONFIG_BT_ENABLED=y
+CONFIG_BT_CONTROLLER_ENABLED=y
+CONFIG_BT_CONTROLLER_ONLY=y
+CONFIG_BT_BLUEDROID_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=n
+
+# Controller
+CONFIG_BTDM_CTRL_MODE_BLE_ONLY=y
+CONFIG_BTDM_CTRL_HCI_MODE_VHCI=y
+CONFIG_BT_CTRL_HCI_TL_EFF=1
+CONFIG_BTDM_CTRL_BLE_MAX_CONN=4
+CONFIG_BTDM_BLE_SCAN_DUPL=y
+CONFIG_BT_RESERVE_DRAM=0xdb5c
+
+# SW coex disabled: BLE-only build (no WiFi concurrency). Required because
+# the BT controller's coex_schm_status_bit_clear_wrapper path triggers a
+# ROM-side coex_schm_lock crash on ESP32-S3 when SW_COEXIST is enabled but
+# WiFi is not initialized. CONFIG_SW_COEXIST_ENABLE alone gates the bt.c
+# #if guards containing the crashing path; CONFIG_ESP_COEX_ENABLED is left
+# at its hidden default so coex_pre_init still runs at boot for PHY setup.
+CONFIG_SW_COEXIST_ENABLE=n

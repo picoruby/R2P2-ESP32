@@ -66,6 +66,10 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-pwm/ports/esp32/pwm.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-rmt/ports/esp32/rmt.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-watchdog/ports/esp32/watchdog.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble_peripheral.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble_central.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/btstack_owner.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/esp32/timing_alt.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/cipher.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/cmac.c
@@ -92,6 +96,7 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-littlefs/ports/esp32
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/include
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/lib/prism/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32
     ${ADDITIONAL_INCLUDE_DIRS}
   PRIV_REQUIRES
     esp_driver_gpio
@@ -107,6 +112,7 @@ idf_component_register(
     nvs_flash
     esp_psram
     esp_driver_usb_serial_jtag
+    btstack
 )
 
 add_definitions(
