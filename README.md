@@ -123,17 +123,18 @@ $ cd R2P2-ESP32
 
 # Activate ESP-IDF (replace x with your patch version, e.g. 4)
 $ source ~/.espressif/tools/activate_idf_v5.5.x.sh
+$ export PATH="$IDF_PATH/tools:$PATH"
 ```
 
 After activation, add Ruby to PATH using your version manager:
 
 ```sh
 # mise:
-$ export PATH="$HOME/.local/share/mise/shims:$PATH"
+$ mise use ruby@4.0.5
 # asdf:
-$ export PATH="$HOME/.asdf/shims:$PATH"
+$ asdf local ruby 4.0.5
 # rbenv:
-$ export PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH"
+$ rbenv local 4.0.5
 ```
 
 Set the C compiler (`CC`) and Archiver (`AR`) to the host toolchain.
@@ -149,6 +150,13 @@ $ export AR=/usr/bin/ar
 ```
 
 > **Tip:** You can manage all of the above environment variables in a `.envrc` file using [direnv](https://direnv.net/), so they are applied automatically whenever you enter the project directory.
+
+```
+source ~/.espressif/tools/activate_idf_v5.5.4.sh
+PATH_add "$IDF_PATH/tools"
+export CC=/usr/bin/cc
+export AR=/usr/bin/ar
+```
 
 ```sh
 # Setup (first time only)
