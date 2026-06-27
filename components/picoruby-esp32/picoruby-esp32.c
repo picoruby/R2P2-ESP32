@@ -37,7 +37,7 @@ uint8_t heap_pool[HEAP_SIZE];
 #endif
 
 #if defined(PICORB_VM_MRUBY)
-mrb_state *global_mrb = NULL;
+extern mrb_state *global_mrb; /* defined in mruby-compiler (ccontext.c) */
 #endif
 
 void
