@@ -90,8 +90,8 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/lib/mbedtls/include
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-filesystem-fat/ports/esp32
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-littlefs/ports/esp32
-    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/include
-    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/lib/prism/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/lib/prism/include
     ${ADDITIONAL_INCLUDE_DIRS}
   PRIV_REQUIRES
     esp_driver_gpio
@@ -150,8 +150,8 @@ endif()
 target_include_directories(
   ${COMPONENT_LIB}
   PRIVATE
-    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/include
-    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler2/lib/prism/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/lib/prism/include
     ${ADDITIONAL_INCLUDE_DIRS}
 )
 
@@ -162,7 +162,7 @@ add_dependencies(${COMPONENT_LIB} ${CUSTOM_TARGET_NAME})
 
 # Compile Ruby files
 set(RUBY_FILES main_task)
-set(PICORBC ${COMPONENT_DIR}/picoruby/bin/picorbc)
+set(PICORBC ${COMPONENT_DIR}/picoruby/bin/mrbc)
 set(GENERATED_C_FILES "")
 
 foreach(rb ${RUBY_FILES})
