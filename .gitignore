@@ -6,6 +6,7 @@ dependencies.lock
 .envrc
 storage/home/*
 !storage/home/.keep
+!storage/home/dap_debug_sample.rb
 storage/etc/*
 !storage/etc/.keep
 .vscode/*
