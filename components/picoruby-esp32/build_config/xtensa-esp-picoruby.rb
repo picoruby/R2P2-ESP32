@@ -68,4 +68,8 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem core: 'picoruby-net-mqtt'
   conf.gem core: 'picoruby-net-ntp'
   conf.gem core: 'picoruby-adafruit_sk6812'
+
+  # picoruby-debug is mruby-only and requires picoruby-socket (above) to
+  # serve DAP over WiFi; see README.md's "Remote debugging over WiFi" section.
+  conf.gem github: 'yuuu/picoruby-debug', branch: 'main'
 end
