@@ -171,6 +171,33 @@ rake femtoruby:build
 
 See [Supported Devices](#supported-devices) for which VMs are available for each device.
 
+### Enabling WiFi (`USE_WIFI`)
+
+WiFi native code (`Network::WiFi` / `ESP32::WiFi`, and by extension `picoruby-socket`'s
+`TCPServer`/`TCPSocket` over WiFi) is **not** compiled in by default. To enable it, set the
+`USE_WIFI` environment variable before building:
+
+```sh
+$ export USE_WIFI=1
+$ rake build
+```
+
+This is required, for example, to use [picoruby-debug](https://github.com/yuuu/picoruby-debug)'s
+DAP remote debugging over WiFi.
+
+> **Note:** `USE_WIFI` is only read while CMake configures the project, not on every build. If
+> you already ran `rake setup_*` or `rake build` without `USE_WIFI` set, a plain
+> `USE_WIFI=1 rake build` will not pick it up and can fail with linker errors such as
+> `undefined reference to 'ESP32_WIFI_init'`. Force a reconfigure first:
+>
+> ```sh
+> $ export USE_WIFI=1
+> $ idf.py reconfigure
+> $ rake build
+> ```
+>
+> Alternatively, run `rake setup_*` again with `USE_WIFI=1` already exported.
+
 ### Flash and Monitor
 
 Flash the built image to your device:
