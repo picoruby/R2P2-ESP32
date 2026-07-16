@@ -2,6 +2,9 @@
 #include <nvs_flash.h>
 #include <esp_heap_caps.h>
 #include <esp_psram.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_task.h"
 #include "picoruby.h"
 #include "sdkconfig.h"
 #include "driver/uart_vfs.h"
@@ -34,6 +37,10 @@
 uint8_t *heap_pool = NULL;
 #else
 uint8_t heap_pool[HEAP_SIZE];
+#endif
+
+#ifndef STACK_SIZE
+#define STACK_SIZE (1024 * 8)
 #endif
 
 #if defined(PICORB_VM_MRUBY)
@@ -83,8 +90,8 @@ teardown(void)
   nvs_flash_deinit();
 }
 
-void
-picoruby_esp32(void)
+static void
+picoruby_esp32_task(void *pvParameters)
 {
   setup();
 
@@ -123,4 +130,19 @@ picoruby_esp32(void)
 #endif
 
   teardown();
+  vTaskDelete(NULL);
+}
+
+void
+picoruby_esp32(void)
+{
+  xTaskCreatePinnedToCore(
+    picoruby_esp32_task,
+    "picoruby_task",
+    STACK_SIZE,
+    NULL,
+    ESP_TASK_MAIN_PRIO,
+    NULL,
+    ESP_TASK_MAIN_CORE
+  );
 }
