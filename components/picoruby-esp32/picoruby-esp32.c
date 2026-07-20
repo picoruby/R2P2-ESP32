@@ -39,8 +39,8 @@ uint8_t *heap_pool = NULL;
 uint8_t heap_pool[HEAP_SIZE];
 #endif
 
-#ifndef STACK_SIZE
-#define STACK_SIZE (1024 * 8)
+#ifndef PICORB_TASK_STACK_SIZE
+#define PICORB_TASK_STACK_SIZE (1024 * 8)
 #endif
 
 #if defined(PICORB_VM_MRUBY)
@@ -139,7 +139,7 @@ picoruby_esp32(void)
   xTaskCreatePinnedToCore(
     picoruby_esp32_task,
     "picoruby_task",
-    STACK_SIZE,
+    PICORB_TASK_STACK_SIZE,
     NULL,
     ESP_TASK_MAIN_PRIO,
     NULL,
