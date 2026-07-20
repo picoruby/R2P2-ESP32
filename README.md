@@ -198,6 +198,53 @@ DAP remote debugging over WiFi.
 >
 > Alternatively, run `rake setup_*` again with `USE_WIFI=1` already exported.
 
+### Remote debugging over WiFi (DAP)
+
+[picoruby-debug](https://github.com/yuuu/picoruby-debug) can serve the
+[Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) over a plain
+TCP socket, so an editor (VS Code, Zed, ...) can set breakpoints, step, and inspect variables on
+the device remotely. It is **mruby-only** (the PicoRuby VM, not FemtoRuby/mruby/c), and it needs
+`picoruby-socket` to serve DAP — both are already wired into
+`components/picoruby-esp32/build_config/xtensa-esp-picoruby.rb` (and the `riscv-esp-picoruby.rb`
+equivalent).
+
+1. Build with WiFi enabled and the PicoRuby (mruby) VM:
+
+   ```sh
+   $ export USE_WIFI=1
+   $ idf.py reconfigure   # if the project was already configured without USE_WIFI, see above
+   $ rake picoruby:build
+   ```
+
+2. Connect the device to WiFi. Either let it auto-connect at boot (write
+   `storage/etc/network/wifi.yml` with `auto_connect: true`, e.g. via `rake gen_wifi_config`), or
+   connect manually from the shell/a script with `Network::WiFi.connect_timeout(ssid, password,
+   auth, timeout)`. Either way, wait until `Network::WiFi.link_connected?` is true before opening
+   the DAP port — the network stack isn't up until then.
+
+3. Call `Debugger.listen_dap(port)` **before** the first `binding.debugger` call, then hit that
+   breakpoint as usual:
+
+   ```ruby
+   require 'debug'
+   Debugger.listen_dap(4711)
+   binding.debugger
+   ```
+
+   See [`storage/home/dap_debug_sample.rb`](storage/home/dap_debug_sample.rb) for a full example
+   that waits for the WiFi link before opening the DAP port. Copy it (or its content) into your
+   own `/home` script via the [R2P2 Web Terminal](https://picoruby.org/terminal)'s File Editor, or
+   have it built into the storage image (it's already placed under `storage/home/`, which
+   `rake build` packages into `storage.bin`).
+
+4. From your editor's DAP client, attach to `<device IP>:<port>` (e.g. `192.168.1.42:4711`). Find
+   the device's IP via `ESP32::WiFi.tcpip_link_status_name` output on the console, or your
+   router's DHCP lease list.
+
+`Debugger.listen_dap` only takes effect for the very next `binding.debugger` call — see
+picoruby-debug's own README for the full protocol/command reference and POSIX-side testing
+instructions.
+
 ### Flash and Monitor
 
 Flash the built image to your device:
