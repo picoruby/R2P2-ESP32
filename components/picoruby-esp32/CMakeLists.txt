@@ -11,6 +11,7 @@ if(${PICORB_VM} STREQUAL "mruby")
   set(ADDITIONAL_INCLUDE_DIRS
     ${COMPONENT_DIR}/picoruby/build/esp32-picoruby/include
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mruby/lib/mruby/include
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-task/include
   )
   set(ADDITIONAL_DEFINITIONS
     -DMRB_TICK_UNIT=10
@@ -22,6 +23,9 @@ if(${PICORB_VM} STREQUAL "mruby")
     -DPICORB_ALLOC_ESTALLOC
     -DPICORB_ALLOC_ALIGN=8
     -DPICORB_VM_MRUBY
+  )
+  set(ADDITIONAL_SRCS
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mruby/ports/esp32/task.c
   )
 else()
   file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/build/esp32-femtoruby/mrbgems)
@@ -38,6 +42,7 @@ else()
     -DMRC_CUSTOM_ALLOC
     -DPICORB_VM_MRUBYC
   )
+  set(ADDITIONAL_SRCS "")
 endif()
 
 if(CONFIG_ESP_WIFI_ENABLED AND DEFINED ENV{USE_WIFI})
@@ -56,6 +61,7 @@ endif()
 idf_component_register(
   SRCS
     ${COMPONENT_DIR}/picoruby-esp32.c
+    ${ADDITIONAL_SRCS}
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-esp32/ports/esp32.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-machine/ports/esp32/machine.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-machine/ports/common/machine.c
