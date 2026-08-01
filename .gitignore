@@ -1,4 +1,6 @@
 build
+build-qemu*
+qemu-boot-*.log
 sdkconfig
 sdkconfig.old
 dependencies.lock
