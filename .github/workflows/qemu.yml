@@ -1,0 +1,41 @@
+name: QEMU boot test (ESP32-S3)
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  qemu-boot:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - vm_name: femtoruby
+            vm_flag: mrubyc
+          - vm_name: picoruby
+            vm_flag: mruby
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Bundle install
+        run: bundle install
+        working-directory: ./components/picoruby-esp32/picoruby
+      - name: Build PicoRuby
+        run: rake
+        working-directory: ./components/picoruby-esp32/picoruby
+      - name: Boot on QEMU (${{ matrix.vm_name }})
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32s3
+          path: '.'
+          command: bash scripts/qemu_boot_check.sh ${{ matrix.vm_flag }}
