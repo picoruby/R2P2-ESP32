@@ -24,9 +24,6 @@ if(${PICORB_VM} STREQUAL "mruby")
     -DPICORB_ALLOC_ALIGN=8
     -DPICORB_VM_MRUBY
   )
-  set(ADDITIONAL_SRCS
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mruby/ports/esp32/task.c
-  )
 else()
   file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/build/esp32-femtoruby/mrbgems)
   set(MRUBY_CONFIG_STRING "${COMPONENT_DIR}/build_config/${IDF_TARGET_ARCH}-esp-femtoruby.rb")
