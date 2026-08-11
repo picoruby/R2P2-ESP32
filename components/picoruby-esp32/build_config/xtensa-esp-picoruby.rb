@@ -60,6 +60,10 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem core: 'picoruby-uart'
   conf.gem core: 'picoruby-pwm'
 
+  # BLE
+  conf.gem core: 'picoruby-ble'
+  conf.gem core: 'picoruby-ble-uart'
+
   # others
   conf.gem core: 'picoruby-rmt'
   conf.gem core: 'picoruby-mbedtls'
