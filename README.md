@@ -171,6 +171,77 @@ rake femtoruby:build
 
 See [Supported Devices](#supported-devices) for which VMs are available for each device.
 
+### Building with Docker
+
+Instead of installing ESP-IDF, Ruby, and a host toolchain locally, you can build entirely inside
+a container based on the official [`espressif/idf`](https://hub.docker.com/r/espressif/idf) image,
+which already bundles ESP-IDF, `gcc`, and `ruby`. `docker/Dockerfile` adds the couple of packages
+that image is missing for a PicoRuby build (`ruby-dev`, `libssl-dev`) on top of it; `rake docker:*`
+tasks build that image automatically the first time you use them.
+
+Requirements: Docker and the submodules checked out locally (`git submodule update --init
+--recursive`, see [Getting the Source](#getting-the-source)).
+
+The project directory is bind-mounted into the container, so your host's Docker file-sharing
+backend needs to handle symlinks correctly (it has to read and create files through the symlinks
+vendored under `components/picoruby-esp32/picoruby`). **On macOS, `virtiofs` must be enabled** --
+other backends (Docker Desktop's `gRPC FUSE`/`osxfs`, Rancher Desktop's `reverse-sshfs`/9p) fail
+with `Operation not permitted`.
+
+Every `docker:*` task runs the equivalently-named task (`docker:setup_esp32s3` → `rake
+setup_esp32s3`, `docker:picoruby:build` → `rake picoruby:build`, etc.) inside the container, so it
+behaves like the native build:
+
+```sh
+# Setup (first time only)
+$ rake docker:setup_esp32s3   # or docker:setup_esp32, docker:setup_esp32c3, ...
+
+# Build
+$ rake docker:build
+$ rake docker:picoruby:build  # or docker:femtoruby:build
+
+# Run on QEMU (ESP32-S3), no hardware required
+$ rake docker:setup_qemu
+$ rake docker:picoruby:qemu   # or docker:femtoruby:qemu, docker:qemu
+
+# Ad-hoc shell in the container
+$ rake docker:shell
+```
+
+Unlike the native build, `docker:*` tasks don't read `SDKCONFIG_DEFAULTS`/`USE_WIFI`/etc. from
+your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
+pass it to the container as-is if it exists). Docker's `--env-file` format doesn't strip quotes
+the way a shell does, so **don't quote the value**:
+
+```sh
+# .env
+SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfigs/usb_console
+```
+
+To use a different ESP-IDF patch version than the pinned default (`v5.5.4`, see `DOCKER_IDF_TAG` in
+`rakelib/docker.rake`), set `ESP_IDF_DOCKER_TAG` (any tag from the
+[image's tag list](https://hub.docker.com/r/espressif/idf/tags)):
+
+```sh
+$ export ESP_IDF_DOCKER_TAG=v5.5.5
+$ rake docker:build
+```
+
+Gems (`bundle install`) and ccache output are cached in `.bundle-docker`/`.ccache` under the
+project root (gitignored) so they persist between runs. If you've also built natively on the host,
+`docker:*` tasks automatically detect and rebuild a stale host-arch (e.g. macOS Mach-O) `mrbc` left
+under `components/picoruby-esp32/picoruby/build` -- otherwise it would look "already built" and
+fail to link with "file format not recognized". `rake docker:reset` clears the gem/ccache caches
+for a clean slate if they ever end up in a bad state.
+
+> **Note:** There's no `docker:flash`/`docker:monitor` task, because most container setups (e.g.
+> Docker Desktop, Rancher Desktop on macOS/Windows) can't pass the device's serial port through to
+> the container at all -- it's not a Dockerfile/CLI-flag issue, the port simply isn't visible
+> inside their Linux VM. Flash/monitor the image built by `docker:build` from the host instead
+> with `rake flash`/`rake monitor` (see [Flash and Monitor](#flash-and-monitor)) -- these don't
+> need a full ESP-IDF install either. On native Linux, `docker run --device=/dev/ttyUSB0 ...` can
+> pass a serial device through if you want to flash from inside a container too.
+
 ### Enabling WiFi (`USE_WIFI`)
 
 WiFi native code (`Network::WiFi` / `ESP32::WiFi`, and by extension `picoruby-socket`'s
@@ -200,6 +271,10 @@ DAP remote debugging over WiFi.
 
 ### Flash and Monitor
 
+`rake flash`/`rake monitor` call `esptool`/`esp-idf-monitor` directly rather than `idf.py`, so
+they work from a `build/` produced by [Docker](#building-with-docker) too, without a full
+ESP-IDF install on the host -- just `pip install esptool esp-idf-monitor`.
+
 Flash the built image to your device:
 
 ```sh
@@ -210,6 +285,12 @@ Open a serial terminal to connect to your device:
 
 ```sh
 $ rake monitor
+```
+
+If the serial port isn't auto-detected correctly (e.g. multiple devices connected), set `PORT`:
+
+```sh
+$ PORT=/dev/tty.usbserial-0001 rake flash
 ```
 
 ### Running on QEMU (ESP32-S3)

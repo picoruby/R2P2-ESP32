@@ -13,3 +13,5 @@ storage/etc/*
 .vscode/*
 .cache
 managed_components/*
+.bundle-docker
+.ccache
