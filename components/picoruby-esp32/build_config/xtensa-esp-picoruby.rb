@@ -68,4 +68,5 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem core: 'picoruby-net-mqtt'
   conf.gem core: 'picoruby-net-ntp'
   conf.gem core: 'picoruby-adafruit_sk6812'
+  conf.gem github: 'yuuu/picoruby-ros2node', branch: 'main'
 end
