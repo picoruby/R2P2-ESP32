@@ -6,3 +6,5 @@ updates:
       interval: "daily"
       time: "17:00"
       timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 0
