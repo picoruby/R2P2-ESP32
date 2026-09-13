@@ -28,7 +28,7 @@
 #if defined(PICORB_VM_MRUBYC)
 #define HEAP_SIZE (1024 * 100)
 #elif defined(PICORB_VM_MRUBY)
-#define HEAP_SIZE (1024 * 180)
+#define HEAP_SIZE (1024 * 220)
 #endif
 #endif
 #endif

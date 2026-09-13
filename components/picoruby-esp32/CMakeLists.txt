@@ -2,6 +2,7 @@ set(PICORB_VM "mrubyc" CACHE STRING "Select build mode (mrubyc or mruby)")
 message(STATUS "PICORB_VM is set to: ${PICORB_VM}")
 
 file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/lib/mbedtls/include)
+file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/build/prism/include)
 
 if(${PICORB_VM} STREQUAL "mruby")
   file(MAKE_DIRECTORY ${COMPONENT_DIR}/picoruby/build/esp32-picoruby/include)
@@ -99,6 +100,7 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-littlefs/ports/esp32
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/include
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/lib/prism/include
+    ${COMPONENT_DIR}/picoruby/build/prism/include
     ${ADDITIONAL_INCLUDE_DIRS}
   PRIV_REQUIRES
     esp_driver_gpio
@@ -159,6 +161,7 @@ target_include_directories(
   PRIVATE
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/include
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/lib/prism/include
+    ${COMPONENT_DIR}/picoruby/build/prism/include
     ${ADDITIONAL_INCLUDE_DIRS}
 )
 
