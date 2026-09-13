@@ -24,6 +24,7 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.cc.defines << 'USE_FAT_FLASH_DISK'
   conf.cc.defines << 'NDEBUG'
   conf.cc.defines << "PICORB_PLATFORM_ESP32"
+  conf.cc.defines << "MRC_PRISM_ARENA_BLOCK=2048"
   conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
 
   if ENV['PICORB_DEBUG']
