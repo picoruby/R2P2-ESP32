@@ -26,6 +26,12 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.cc.defines << "PICORB_PLATFORM_ESP32"
   conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
 
+  # Prism arena block size. The 64KB default in mruby-compiler is host-sized;
+  # this board keeps mruby's whole heap in static RAM without PSRAM, and two
+  # live compiler contexts (boot + sandbox) at 64KB each exhaust it before
+  # the shell starts. Matches picoruby's own Pico build_configs.
+  conf.cc.defines << "MRC_PRISM_ARENA_BLOCK=2048"
+
   if ENV['PICORB_DEBUG']
     conf.cc.defines << 'ESTALLOC_DEBUG'
     conf.enable_debug
