@@ -31,5 +31,7 @@ desc "Monitor ESP32 serial output via esp-idf-monitor (no ESP-IDF install needed
 task :monitor do
   desc_json = build_project_description
   port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
-  sh "python3 -m esp_idf_monitor #{port} -b #{desc_json['monitor_baud']} build/#{desc_json['app_elf']}"
+  monitor_cmd = system("python3 -c 'import esp_idf_monitor'", out: File::NULL, err: File::NULL) ?
+    "python3 -m esp_idf_monitor" : "idf-monitor"
+  sh "#{monitor_cmd} #{port} -b #{desc_json['monitor_baud']} build/#{desc_json['app_elf']}"
 end
