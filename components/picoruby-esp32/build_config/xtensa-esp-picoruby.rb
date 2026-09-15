@@ -62,6 +62,12 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem core: 'picoruby-pwm'
   conf.gem core: 'picoruby-irq'
 
+  # BLE (CMake sets USE_BLE when CONFIG_BT_NIMBLE_ENABLED is on)
+  if ENV['USE_BLE']
+    conf.gem core: 'picoruby-ble'
+    conf.gem core: 'picoruby-ble-uart'
+  end
+
   # others
   conf.gem core: 'picoruby-rmt'
   conf.gem core: 'picoruby-mbedtls'

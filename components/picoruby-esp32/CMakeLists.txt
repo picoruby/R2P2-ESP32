@@ -49,6 +49,22 @@ if(CONFIG_ESP_WIFI_ENABLED AND DEFINED ENV{USE_WIFI})
   set(MRUBY_USE_WIFI $ENV{USE_WIFI})
 endif()
 
+# NimBLE is off unless sdkconfigs/bt_nimble is listed in SDKCONFIG_DEFAULTS.
+# Its headers only exist when it is on, so the port sources and the Ruby gems
+# that call into them are taken from that one switch.
+if(CONFIG_BT_NIMBLE_ENABLED)
+  set(BLE_SRCS
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble_peripheral.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/ble_central.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32/nimble_owner.c
+  )
+  set(BLE_INCLUDE_DIRS
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-ble/ports/esp32
+  )
+  set(MRUBY_USE_BLE 1)
+endif()
+
 if(DEFINED ENV{HEAP_SIZE})
   list(APPEND ADDITIONAL_DEFINITIONS -DHEAP_SIZE=$ENV{HEAP_SIZE})
 endif()
@@ -90,6 +106,7 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-i2c/ports/esp32/i2c.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-uart/ports/esp32/uart.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-require/ports/esp32/platform.c
+    ${BLE_SRCS}
   INCLUDE_DIRS
     ${COMPONENT_DIR}
     ${COMPONENT_DIR}/picoruby/include
@@ -101,6 +118,7 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/include
     ${COMPONENT_DIR}/picoruby/mrbgems/mruby-compiler/lib/prism/include
     ${COMPONENT_DIR}/picoruby/build/prism/include
+    ${BLE_INCLUDE_DIRS}
     ${ADDITIONAL_INCLUDE_DIRS}
   PRIV_REQUIRES
     esp_driver_gpio
@@ -116,6 +134,7 @@ idf_component_register(
     nvs_flash
     esp_psram
     esp_driver_usb_serial_jtag
+    bt
 )
 
 add_definitions(
@@ -136,6 +155,9 @@ set(MRUBY_ENV
 )
 if(MRUBY_USE_WIFI)
   list(APPEND MRUBY_ENV USE_WIFI=${MRUBY_USE_WIFI})
+endif()
+if(MRUBY_USE_BLE)
+  list(APPEND MRUBY_ENV USE_BLE=${MRUBY_USE_BLE})
 endif()
 
 # Build PicoRuby
