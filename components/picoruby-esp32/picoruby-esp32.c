@@ -30,10 +30,12 @@
 #elif defined(PICORB_VM_MRUBY)
 #if defined(CONFIG_BT_NIMBLE_ENABLED)
 /* NimBLE's own static buffers share dram0_0_seg with this heap; 220 KiB
- * overflows it by ~37 KiB on an ESP32-S3 with no PSRAM. 180 KiB fits and is
- * still enough with MRC_PRISM_ARENA_BLOCK=2048 (verified on a Chain DualKey
- * board: boots and runs the picoruby-ble peripheral example). */
-#define HEAP_SIZE (1024 * 180)
+ * overflows it by ~37 KiB on an ESP32-S3 with no PSRAM, and even 180 KiB
+ * still overflows by a couple KB on newer ESP-IDF releases (their own
+ * static footprint grows over time). 172 KiB leaves headroom and is still
+ * enough with MRC_PRISM_ARENA_BLOCK=2048 (180 KiB verified on a Chain
+ * DualKey board: boots and runs the picoruby-ble peripheral example). */
+#define HEAP_SIZE (1024 * 172)
 #else
 #define HEAP_SIZE (1024 * 220)
 #endif
