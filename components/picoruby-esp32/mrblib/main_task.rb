@@ -22,7 +22,13 @@ end
 begin
   if Machine.wifi_available?
     ARGV[0] = "--check-auto-connect"
-    load "/bin/wifi_connect"
+    begin
+      load "/bin/wifi_connect"
+    rescue => e
+      puts "wifi_connect failed: #{e.message} (#{e.class})"
+    rescue Exception => e
+      puts "wifi_connect failed: #{e.message} (#{e.class})"
+    end
     ARGV.clear
   end
 
@@ -45,4 +51,6 @@ begin
   $shell.start
 rescue => e
   puts "#{e.message} (#{e.class})"
+rescue Exception => e
+  puts "FATAL: #{e.message} (#{e.class})"
 end
