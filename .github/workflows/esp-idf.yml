@@ -57,7 +57,7 @@ jobs:
           # ESP32-S3: PicoRuby with NimBLE
           - target: esp32s3
             vm_flag: mruby
-            sdkconfig_defaults: "sdkconfig.defaults;sdkconfigs/spiram;sdkconfigs/bt_nimble"
+            sdkconfig_defaults: "sdkconfig.defaults;sdkconfigs/bt_nimble"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
