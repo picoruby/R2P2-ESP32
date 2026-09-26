@@ -274,8 +274,13 @@ DAP remote debugging over WiFi.
 `rake flash`/`rake monitor` call [`espflash`](https://github.com/esp-rs/espflash) directly rather
 than `idf.py`, so they work from a `build/` produced by [Docker](#building-with-docker) too,
 without a full ESP-IDF install -- or even Python -- on the host. The first `rake flash`/`monitor`
-run (or an explicit `rake setup_espflash`) downloads the matching prebuilt `espflash` binary for
-your OS/CPU from its GitHub releases into `.tools/`; no Rust/cargo install is needed either.
+run (or an explicit `rake setup_espflash`) looks for an `espflash` already on `PATH`, or downloads
+the matching prebuilt binary for your OS/CPU from its GitHub releases into `.tools/`; no Rust/cargo
+install is needed either.
+
+If espflash has no prebuilt binary for your OS/CPU (or it can't be downloaded, e.g. no network),
+these tasks fall back to `esptool`/`esp-idf-monitor` -- install those with
+`pip install esptool esp-idf-monitor` in that case.
 
 Flash the built image to your device:
 

@@ -14,39 +14,37 @@ def build_project_description
   JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "project_description.json")))
 end
 
-# Maps this host's OS/CPU to the release asset espflash publishes at
-# https://github.com/esp-rs/espflash/releases (each is a `espflash-<target>.zip`).
+# This host's OS/CPU as an espflash release asset target (`espflash-<target>.zip` at
+# https://github.com/esp-rs/espflash/releases), or nil if espflash doesn't publish one.
 def espflash_release_target
   cpu =
     case RbConfig::CONFIG["host_cpu"]
     when /x86_64|amd64/ then "x86_64"
     when /aarch64|arm64/ then "aarch64"
     when /^arm/ then "armv7"
-    else abort "espflash: no prebuilt binary for CPU architecture " \
-               "`#{RbConfig::CONFIG['host_cpu']}`. Install espflash yourself " \
-               "(https://github.com/esp-rs/espflash) and put it on PATH."
     end
+  return nil unless cpu
 
   case RbConfig::CONFIG["host_os"]
   when /darwin/
-    abort "espflash: no prebuilt binary for macOS/#{cpu}" unless %w[x86_64 aarch64].include?(cpu)
-    "#{cpu}-apple-darwin"
+    "#{cpu}-apple-darwin" if %w[x86_64 aarch64].include?(cpu)
   when /linux/
     case cpu
     when "x86_64", "aarch64" then "#{cpu}-unknown-linux-gnu"
     when "armv7" then "armv7-unknown-linux-gnueabihf"
     end
   when /mingw|mswin|windows/
-    abort "espflash: no prebuilt binary for Windows/#{cpu}" unless cpu == "x86_64"
-    "x86_64-pc-windows-msvc"
-  else
-    abort "espflash: no prebuilt binary for OS `#{RbConfig::CONFIG['host_os']}`. " \
-          "Install espflash yourself (https://github.com/esp-rs/espflash) and put it on PATH."
+    "x86_64-pc-windows-msvc" if cpu == "x86_64"
   end
 end
 
+# Downloads the prebuilt espflash binary into ESPFLASH_DIR. Returns false (never raises) on
+# any failure -- unsupported host/CPU, no network, etc. -- so callers can fall back.
 def download_espflash
-  asset = "espflash-#{espflash_release_target}.zip"
+  target = espflash_release_target
+  return false unless target
+
+  asset = "espflash-#{target}.zip"
   url = "https://github.com/esp-rs/espflash/releases/download/v#{ESPFLASH_VERSION}/#{asset}"
 
   puts "Downloading #{url}"
@@ -65,47 +63,98 @@ def download_espflash
     FileUtils.cp(File.join(tmp, File.basename(ESPFLASH_BIN)), ESPFLASH_BIN)
     File.chmod(0755, ESPFLASH_BIN) unless Gem.win_platform?
   end
+  true
+rescue StandardError => e
+  warn "Warning: failed to download espflash (#{e.message})"
+  false
 end
 
-desc "Download the espflash binary that `rake flash`/`rake monitor` use (no Rust/cargo install needed)"
+def on_path(name)
+  ENV["PATH"].split(File::PATH_SEPARATOR)
+             .map { |dir| File.join(dir, name) }
+             .find { |path| File.file?(path) && File.executable?(path) }
+end
+
+# Returns a path to an espflash binary -- already downloaded, already on PATH, or freshly
+# downloaded -- or nil (never raises) if none is available, so `flash`/`monitor` can fall back
+# to esptool.py/esp-idf-monitor instead.
+def find_espflash
+  return ESPFLASH_BIN if File.executable?(ESPFLASH_BIN)
+
+  found = on_path(Gem.win_platform? ? "espflash.exe" : "espflash")
+  return found if found
+
+  ESPFLASH_BIN if download_espflash
+end
+
+desc "Look for espflash (or download it) so `rake flash`/`rake monitor` don't need Python"
 task :setup_espflash do
-  download_espflash unless File.executable?(ESPFLASH_BIN)
+  if find_espflash
+    puts "espflash is available; `rake flash`/`rake monitor` will use it."
+  else
+    puts "espflash is not available for this host; `rake flash`/`rake monitor` will fall " \
+         "back to esptool.py/esp-idf-monitor."
+  end
 end
 
-# ENV['PORT'] overrides the serial port; otherwise espflash auto-detects it.
-desc "Flash the built firmware to ESP32 via espflash (no Python/ESP-IDF install needed)"
-task :flash => :setup_espflash do
+# ENV['PORT'] overrides the serial port; otherwise espflash/esptool auto-detect it.
+desc "Flash the built firmware to ESP32 via espflash, falling back to esptool.py if unavailable"
+task :flash do
   chip = build_project_description["target"]
-  port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
-  flash_files = JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "flasher_args.json")))["flash_files"]
 
   FileUtils.cd(File.join(R2P2_ESP32_ROOT, "build")) do
-    flash_files.sort_by { |addr, _file| Integer(addr, 16) }.each do |addr, file|
-      sh ESPFLASH_BIN, "write-bin", addr, file,
-         "--chip", chip, "--baud", "460800", "--non-interactive", *port_args
+    if (espflash = find_espflash)
+      port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
+      flash_files = JSON.parse(File.read("flasher_args.json"))["flash_files"]
+      flash_files.sort_by { |addr, _file| Integer(addr, 16) }.each do |addr, file|
+        sh espflash, "write-bin", addr, file,
+           "--chip", chip, "--baud", "460800", "--non-interactive", *port_args
+      end
+    else
+      port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
+      sh "esptool.py --chip #{chip} #{port} " \
+         "-b 460800 --before default_reset --after hard_reset write_flash @flash_args"
     end
   end
 end
 
 desc "Erase factory partition and flash firmware binary"
-task :flash_factory => :setup_espflash do
-  sh ESPFLASH_BIN, "erase-region", "0x10000", "0x200000", "--non-interactive"
-  sh ESPFLASH_BIN, "write-bin", "0x10000", "build/R2P2-ESP32.bin", "--non-interactive"
+task :flash_factory do
+  if (espflash = find_espflash)
+    sh espflash, "erase-region", "0x10000", "0x200000", "--non-interactive"
+    sh espflash, "write-bin", "0x10000", "build/R2P2-ESP32.bin", "--non-interactive"
+  else
+    sh "esptool.py -b 460800 erase_region 0x10000 0x200000"
+    sh "esptool.py -b 460800 write_flash 0x10000 build/R2P2-ESP32.bin"
+  end
 end
 
 desc "Erase storage partition and flash storage binary"
-task :flash_storage => :setup_espflash do
-  sh ESPFLASH_BIN, "erase-region", "0x210000", "0x100000", "--non-interactive"
-  sh ESPFLASH_BIN, "write-bin", "0x210000", "build/storage.bin", "--non-interactive"
+task :flash_storage do
+  if (espflash = find_espflash)
+    sh espflash, "erase-region", "0x210000", "0x100000", "--non-interactive"
+    sh espflash, "write-bin", "0x210000", "build/storage.bin", "--non-interactive"
+  else
+    sh "esptool.py -b 460800 erase_region 0x210000 0x100000"
+    sh "esptool.py -b 460800 write_flash 0x210000 build/storage.bin"
+  end
 end
 
-desc "Monitor ESP32 serial output via espflash (no Python/ESP-IDF install needed)"
-task :monitor => :setup_espflash do
+desc "Monitor ESP32 serial output via espflash, falling back to esp-idf-monitor if unavailable"
+task :monitor do
   desc_json = build_project_description
-  port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
-  sh ESPFLASH_BIN, "monitor",
-     "--chip", desc_json["target"],
-     "--monitor-baud", desc_json["monitor_baud"].to_s,
-     "--elf", File.join("build", desc_json["app_elf"]),
-     *port_args
+
+  if (espflash = find_espflash)
+    port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
+    sh espflash, "monitor",
+       "--chip", desc_json["target"],
+       "--monitor-baud", desc_json["monitor_baud"].to_s,
+       "--elf", File.join("build", desc_json["app_elf"]),
+       *port_args
+  else
+    port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
+    monitor_cmd = system("python3 -c 'import esp_idf_monitor'", out: File::NULL, err: File::NULL) ?
+      "python3 -m esp_idf_monitor" : "idf-monitor"
+    sh "#{monitor_cmd} #{port} -b #{desc_json['monitor_baud']} build/#{desc_json['app_elf']}"
+  end
 end
