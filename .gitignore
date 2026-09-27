@@ -15,4 +15,5 @@ storage/etc/*
 managed_components/*
 .bundle-docker
 .ccache
+.tools
 *.local.md
