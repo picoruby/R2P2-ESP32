@@ -12,20 +12,23 @@ module R2p2Mcp
     @log_cursor = 0
 
     class << self
+      include Recovery
+
       attr_reader :port
 
       def connected? = !@port.nil? && !@port.eof?
 
       def target = @port&.target
 
-      def connect(target, baud: Port::DEFAULT_BAUD)
+      # Opens the port, nudges the shell with a newline and waits up to +wait+ seconds for its prompt. Nothing
+      # else is sent: the device may still be booting, and stray input there can break its start-up.
+      def connect(target, baud: Port::DEFAULT_BAUD, wait: 10)
         disconnect
         @port = Port.open(target, baud: baud)
         @log_cursor = @port.position
-        # Wake the shell and see whether it answers with a prompt.
         start = @port.position
         @port.write("\r")
-        _, ok = wait_for_prompt(start, 3)
+        _, ok = wait_for_prompt(start, wait)
         ok
       end
 
@@ -41,15 +44,16 @@ module R2p2Mcp
         @port
       end
 
-      # Runs a shell command; returns [output_lines, status]. On timeout the
-      # command is interrupted with Ctrl-C, then (e.g. irb, which ignores it)
-      # Ctrl-D. status is :ok, :timeout (back at the prompt) or :stuck.
+      # Runs a shell command; returns [output_lines, status]. On timeout the command is interrupted with
+      # Ctrl-C, then (e.g. irb, which ignores it) Ctrl-D. status is :ok, :timeout (interrupted, back at the
+      # prompt), :stuck (could not get back) or :unresponsive (the shell never took the command, see
+      # Recovery#interrupt).
       def exec(command, timeout: 10)
         port = port!
         start = port.position
         port.write("#{command}\r")
         _, ok = wait_for_prompt(start, timeout, min_lines: 1)
-        status = ok ? :ok : interrupt(port, start)
+        status = ok ? :ok : interrupt(port, start, command)
         lines, = Terminal.render(port.read_since(start))
         [lines.drop(1), status] # drop the echoed command line
       end
@@ -68,16 +72,6 @@ module R2p2Mcp
         port&.replace_since(start, "[rbtp] #{label}\r\n") if start
       end
 
-      # `reboot` the device and return the boot log up to the next prompt.
-      def reset(timeout: 30)
-        port = port!
-        start = port.position
-        port.write("reboot\r")
-        _, ok = wait_for_prompt(start, timeout, min_lines: 2)
-        lines, partial = Terminal.render(port.read_since(start))
-        [lines.drop(1) + [partial], ok]
-      end
-
       # Last +lines+ lines of the buffer, or everything since the last call.
       def log(lines: 100, since_last: false)
         port = port!
@@ -90,23 +84,6 @@ module R2p2Mcp
       end
 
       private
-
-      # A transfer that failed midway can leave the shell inside a half-started session (it times out
-      # after a few seconds) or with stray input; wait until the prompt is back.
-      def recover_prompt(port)
-        start = port.position
-        port.write("\r")
-        wait_for_prompt(start, 8)
-      end
-
-      # Gets a hung command back to the prompt: :timeout when that worked, else :stuck.
-      def interrupt(port, start)
-        port.write("\x03")
-        return :timeout if wait_for_prompt(start, 2, min_lines: 1).last
-
-        port.write("\x04") # only sent while no prompt is showing, so it never logs out the shell
-        wait_for_prompt(start, 2, min_lines: 1).last ? :timeout : :stuck
-      end
 
       # Waits until the rendered stream ends with the prompt on an otherwise
       # empty line, after at least +min_lines+ completed lines.

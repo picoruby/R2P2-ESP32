@@ -24,8 +24,8 @@ module R2p2Mcp
           if prompt
             text("connected to #{port}; shell prompt seen")
           else
-            text("connected to #{port}, but no shell prompt within 3s (device " \
-                 'booting, crashed, or not at the prompt). Check device_log.')
+            text("connected to #{port}, but no shell prompt within 10s (device " \
+                 'still booting (can take a minute), crashed, or not at the prompt). Check device_log.')
           end
         rescue ArgumentError, IOError, SystemCallError => e
           text("cannot open #{port}: #{e.message}", error: true)

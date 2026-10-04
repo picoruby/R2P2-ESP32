@@ -40,6 +40,13 @@ module R2p2Mcp
         end
       end
 
+      # Waits up to +timeout+ seconds for the job to finish; returns whether it did.
+      def finished_within?(job, timeout)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        sleep 0.2 while job.running? && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+        !job.running?
+      end
+
       def find(job_id = nil)
         job_id ? @jobs.find { |job| job.id == job_id } : @jobs.last
       end
@@ -76,8 +83,8 @@ module R2p2Mcp
         Thread.new do
           _, status = Process.wait2(pid)
           job.exit_code = status.exitstatus || -status.termsig
+          on_finish&.call(job) # the job counts as running until this (e.g. reconnecting after flash) is done
           job.finished_at = Time.now
-          on_finish&.call(job)
         end
       end
     end

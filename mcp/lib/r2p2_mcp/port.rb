@@ -2,6 +2,9 @@
 
 require 'socket'
 
+require_relative 'port_opening'
+require_relative 'serial_reset'
+
 module R2p2Mcp
   # A duplex byte stream to a picoruby-shell: a serial device, or a TCP socket
   # (QEMU's UART). A reader thread keeps everything received in a bounded
@@ -11,22 +14,11 @@ module R2p2Mcp
     MAX_BUFFER = 256 * 1024
     DEFAULT_BAUD = 115_200
 
+    extend PortOpening
+    include SerialReset
+
     attr_reader :target
     attr_writer :tee # called with every chunk received (see PtyBridge)
-
-    def self.open(target, baud: DEFAULT_BAUD)
-      io =
-        if target.start_with?('tcp://')
-          host, port = target.delete_prefix('tcp://').split(':')
-          TCPSocket.new(host, Integer(port))
-        else
-          require 'serialport'
-          SerialPort.new(target, baud, 8, 1, SerialPort::NONE)
-        end
-      new(target, io)
-    end
-
-    def self.tcp?(target) = target.start_with?('tcp://')
 
     def initialize(target, io)
       @target = target
@@ -35,8 +27,7 @@ module R2p2Mcp
       @base = 0 # absolute position of @buffer[0]
       @mutex = Mutex.new
       @cond = ConditionVariable.new
-      @closed = false
-      @eof = false
+      @closed = @eof = false
       @reader = Thread.new { read_loop }
     end
 

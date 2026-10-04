@@ -7,18 +7,20 @@ module R2p2Mcp
       extend Helpers
 
       description 'Flash the built firmware from the host (rake flash; the container cannot see the serial port). ' \
-                  'A connected serial port is released first and reconnected afterwards. Background job.'
+                  'A connected serial port is released first and reconnected afterwards. Waits for it to finish ' \
+                  '(see timeout).'
       input_schema(
         properties: {
           port: { type: 'string',
                   description: 'serial device; default: the connected one, else auto-detected by the flasher' },
           reconnect: { type: 'boolean',
-                       description: 'reconnect to the same port after a successful flash (default true)' }
+                       description: 'reconnect to the same port after a successful flash (default true)' },
+          timeout: WAIT_PROPERTY
         }
       )
 
       class << self
-        def call(port: nil, reconnect: true)
+        def call(port: nil, reconnect: true, timeout: DEFAULT_WAIT)
           current = Device.target
           if current && Port.tcp?(current)
             return text("the connected port #{current} is not a serial device; disconnect it first",
@@ -27,9 +29,9 @@ module R2p2Mcp
 
           port ||= current
           Device.disconnect
-          start_job(label: 'flash', command: RakeTask.command('flash', native: true),
-                    env: port ? { 'PORT' => port } : {},
-                    on_finish: (reconnector(port) if reconnect && port))
+          run_job(label: 'flash', command: RakeTask.command('flash', native: true),
+                  env: port ? { 'PORT' => port } : {}, timeout: timeout,
+                  on_finish: (reconnector(port) if reconnect && port))
         end
 
         private

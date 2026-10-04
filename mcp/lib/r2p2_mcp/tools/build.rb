@@ -2,29 +2,30 @@
 
 module R2p2Mcp
   module Tools
-    # MCP tool `build`: builds the firmware as a background job.
+    # MCP tool `build`: builds the firmware.
     class Build < MCP::Tool
       extend Helpers
 
-      description 'Build the firmware (rake build / picoruby:build / femtoruby:build). Runs as a background job in ' \
-                  'Docker by default. ' \
-                  'Run setup first. Pass the same sdkconfigs / use_wifi as setup.'
+      description 'Build the firmware (rake picoruby:build / femtoruby:build). Docker by default. Run setup first; ' \
+                  'pass the same sdkconfigs / use_wifi as setup. Waits for it to finish (see timeout).'
       input_schema(
         properties: {
           vm: { type: 'string', enum: RakeTask::VMS,
-                description: 'picoruby (mruby) or femtoruby (mruby/c); omit to keep the configured VM' },
+                description: 'picoruby (mruby, default) or femtoruby (mruby/c)' },
           sdkconfigs: { type: 'array', items: { type: 'string' } },
           use_wifi: { type: 'boolean' },
-          native: { type: 'boolean', description: 'Run on the host instead of Docker' }
+          native: { type: 'boolean', description: 'Run on the host instead of Docker' },
+          timeout: WAIT_PROPERTY
         }
       )
 
       class << self
-        def call(vm: nil, sdkconfigs: [], use_wifi: false, native: false)
-          start_job(
-            label: "build#{" #{vm}" if vm}",
-            command: RakeTask.command(vm ? "#{vm}:build" : 'build', native: native),
-            env: RakeTask.env(sdkconfigs: sdkconfigs, use_wifi: use_wifi)
+        def call(vm: 'picoruby', sdkconfigs: [], use_wifi: false, native: false, timeout: DEFAULT_WAIT)
+          run_job(
+            label: "build #{vm}",
+            command: RakeTask.command("#{vm}:build", native: native),
+            env: RakeTask.env(sdkconfigs: sdkconfigs, use_wifi: use_wifi),
+            timeout: timeout
           )
         end
       end

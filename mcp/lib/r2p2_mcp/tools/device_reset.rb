@@ -6,14 +6,17 @@ module R2p2Mcp
     class DeviceReset < MCP::Tool
       extend Helpers
 
-      description 'Reboot the device (shell `reboot`) and return the boot log up to the next prompt.'
-      input_schema(properties: { timeout: { type: 'number', description: 'seconds, default 30' } })
+      description 'Reboot the device (shell `reboot`) and return the boot log up to the next prompt. If the shell ' \
+                  'does not come back, a serial device is reset through DTR/RTS (like esptool). Boot can take up to ' \
+                  'a minute on some builds.'
+      input_schema(properties: { timeout: { type: 'number', description: 'seconds, default 60' } })
 
       class << self
-        def call(timeout: 30)
+        def call(timeout: 60)
           device_call do
-            lines, ok = Device.reset(timeout: timeout)
-            text(lines.join("\n") + (ok ? '' : "\n[no prompt within #{timeout}s]"), error: !ok)
+            lines, ok, method = Device.reset(timeout: timeout)
+            text("[reset via #{method}]\n#{lines.join("\n")}#{"\n[no prompt within #{timeout}s]" unless ok}",
+                 error: !ok)
           end
         end
       end

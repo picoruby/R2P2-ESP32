@@ -38,16 +38,18 @@ claude mcp add r2p2-esp32 -- /path/to/R2P2-ESP32/mcp/bin/r2p2-esp32-mcp
 
 ## Tools
 
-Builds take minutes, so `setup`, `build` and `clean` run as **background jobs**: they return a
-job id immediately, and you follow progress with `job_status` / `job_log`. Only one job runs at
-a time. Everything runs in Docker (`rake docker:*`) unless `native: true` is passed.
+`setup`, `build`, `clean` and `flash` run the rake task as a job and **wait for it** (`timeout`,
+default 300 s; `0` returns at once). If it takes longer it keeps running and the call says so: follow
+it with `job_wait`. Only one job runs at a time. Everything runs in Docker (`rake docker:*`) unless
+`native: true` is passed.
 
 | tool | arguments | what it does |
 |------|-----------|--------------|
-| `setup` | `target` (required: `esp32`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32p4`, `esp32s3`), `sdkconfigs`, `use_wifi`, `native` | `rake setup_<target>`. Deletes the old `sdkconfig` first, because it caches `SDKCONFIG_DEFAULTS`. |
-| `build` | `vm` (`picoruby` / `femtoruby`; omit to keep the configured one), `sdkconfigs`, `use_wifi`, `native` | `rake [<vm>:]build` |
-| `clean` | `deep`, `native` | `rake clean`, or `deep_clean` with `deep: true` |
-| `job_status` | `job_id` (default: latest) | running / succeeded / failed. On failure, includes extracted error lines and the last 20 log lines. |
+| `setup` | `target` (required: `esp32`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32p4`, `esp32s3`), `sdkconfigs`, `use_wifi`, `native`, `timeout` | `rake setup_<target>`. Deletes the old `sdkconfig` first, because it caches `SDKCONFIG_DEFAULTS`. |
+| `build` | `vm` (`picoruby` (default) / `femtoruby`), `sdkconfigs`, `use_wifi`, `native`, `timeout` | `rake <vm>:build` |
+| `clean` | `deep`, `native`, `timeout` | `rake clean`, or `deep_clean` with `deep: true` |
+| `job_wait` | `job_id` (default: latest), `timeout` (default 300 s) | wait for a job that was still running, then report it |
+| `job_status` | `job_id` (default: latest) | running / succeeded / failed, without waiting. On failure, includes extracted error lines and the last 20 log lines. |
 | `job_log` | `job_id`, `lines` (default 100) | tail of the job log |
 
 ### Device tools
@@ -59,12 +61,12 @@ These talk to the device's `picoruby-shell` through one connection held by the s
 | `serial_list_ports` | | list `/dev/ttyACM*`, `ttyUSB*`, `cu.usb*` ports |
 | `serial_connect` | `port` (required), `baud` | connect to a serial device or `tcp://host:port` (e.g. QEMU's UART) and check for the `$> ` prompt. Replaces a previous connection. |
 | `serial_disconnect` | | release the port (do this before `rake monitor` or a web terminal) |
-| `device_exec` | `command` (required), `timeout` (default 10 s) | run a shell command, return its output when the prompt returns. On timeout: Ctrl-C, then Ctrl-D if still stuck (e.g. in `irb`). |
+| `device_exec` | `command` (required), `timeout` (default 10 s) | run a shell command, return its output when the prompt returns. On timeout: Ctrl-C, then Ctrl-D if still stuck (e.g. in `irb`). If the shell never echoed the command (device still booting or hung), nothing is sent, since a Ctrl-C during boot breaks the shell's start-up, and it says so. |
 | `device_log` | `lines` (default 100), `since_last` | everything the device printed since connecting (last 256 KiB kept). Crash markers (`Guru Meditation`, `Backtrace:`, `assert failed`, ...) are listed first. |
-| `device_reset` | `timeout` (default 30 s) | shell `reboot`, returns the boot log up to the next prompt |
+| `device_reset` | `timeout` (default 60 s) | shell `reboot`, returns the boot log up to the next prompt. Boot can take up to a minute on some builds, so it is waited for; if the prompt does not come, a serial device is reset through DTR/RTS (like esptool) |
 | `device_upload` | `remote_path`, `local_path` or `content` | write a file to the device over RBTP (PicoModem) with `rake picomodem:put`, CRC32-checked. `content` uploads text without a local file, e.g. a script to run next. Default `remote_path`: basename of `local_path`. |
 | `device_download` | `remote_path` (required), `local_path` | read a file from the device over RBTP (`rake picomodem:get`) and save it locally |
-| `flash` | `port`, `reconnect` (default true) | host-side `rake flash` as a background job. Releases the serial port first and reconnects after success. Not available while connected to a `tcp://` port. |
+| `flash` | `port`, `reconnect` (default true), `timeout` | host-side `rake flash`. Releases the serial port first and reconnects after success. Not available while connected to a `tcp://` port. |
 
 File transfer needs the shell at its prompt (not inside `irb`) and the host `picoruby` built by
 `setup` (on macOS, a Docker-only build leaves a Linux binary there; run `rake setup_<target>`
@@ -116,10 +118,11 @@ Pass the same `sdkconfigs` / `use_wifi` to `build` as to `setup`. Changing them 
 ### Typical flow
 
 1. `setup` with `target: "esp32s3"`, `sdkconfigs: ["usb_console", "spiram"]`
-2. `job_status` until it succeeds
-3. `build` with `vm: "picoruby"`, then `job_status` / `job_log`
-4. `flash`, then `job_status`; the server reconnects to the port afterwards
-5. `device_upload` your script, then `device_exec` (`./app.rb`) and `device_log` to see what happened
+2. `build` (the picoruby VM by default; same `sdkconfigs`)
+3. `flash`; the server reconnects to the port afterwards
+4. `device_upload` your script, then `device_exec` (`./app.rb`) and `device_log` to see what happened
+
+Steps 1 to 3 return when the job is done (see `job_wait` for one that outlasts `timeout`).
 
 ## Notes
 
