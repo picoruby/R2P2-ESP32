@@ -138,11 +138,17 @@ if(MRUBY_USE_WIFI)
   list(APPEND MRUBY_ENV USE_WIFI=${MRUBY_USE_WIFI})
 endif()
 
+# Rebuild libmruby.a when the build config or a custom mrbgem (mrbgems/ at the project root) changes.
+# Without DEPENDS this command only runs while libmruby.a does not exist yet.
+get_filename_component(CUSTOM_MRBGEMS_DIR ${COMPONENT_DIR}/../../mrbgems ABSOLUTE)
+file(GLOB_RECURSE CUSTOM_MRBGEM_FILES CONFIGURE_DEPENDS ${CUSTOM_MRBGEMS_DIR}/*)
+
 # Build PicoRuby
 add_custom_command(
   OUTPUT ${LIBMRUBY_FILE}
   COMMAND ${CMAKE_COMMAND} -E echo ${MRUBY_ENV} rake
   COMMAND ${CMAKE_COMMAND} -E env ${MRUBY_ENV} rake
+  DEPENDS ${MRUBY_CONFIG_STRING} ${CUSTOM_MRBGEM_FILES}
   WORKING_DIRECTORY ${PICORUBY_DIR}
   COMMENT "PicoRuby build"
   VERBATIM

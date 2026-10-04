@@ -1,6 +1,6 @@
 # R2P2-ESP32 MCP server — design notes
 
-Status: M1 (build tools), M2 (serial, shell, log, flash), M3 (RBTP file transfer) and M4 (QEMU) implemented; M2 to M4 verified on QEMU only. M5 not started.
+Status: M1 (build tools), M2 (serial, shell, log, flash), M3 (RBTP file transfer) and M4 (QEMU) and M5 (mrbgem helpers) implemented; M2 to M5 verified on QEMU only.
 
 An MCP server for developers of PicoRuby firmware on ESP32. It lets an AI assistant run the
 whole loop: build → flash → talk to the device → read logs → fix, plus a no-hardware loop on QEMU.
@@ -78,9 +78,19 @@ triggers `reconfigure` (see README).
 
 Meant for checks that need no peripherals (logic, scripts under `/home`, boot checks).
 
-### mrbgem helper (later)
+### mrbgem helper
 
-`mrbgem_scaffold` (`mrbgem.rake`, `mrblib/`, `src/`) and adding a gem to `build_config/*.rb`.
+| tool | what it does |
+|------|--------------|
+| `mrbgem_list` | gems in `picoruby/mrbgems/picoruby-*` and the project's `mrbgems/`, with where each is enabled (parsed from `build_config/*.rb` and the gemboxes they include; gembox conditions are ignored) |
+| `mrbgem_enable` / `mrbgem_disable` | add / remove a `conf.gem` line in the selected build configs. Core gems: `conf.gem core: 'x'`; custom: `conf.gem gemdir: File.expand_path('../../../mrbgems/x', __dir__)`. Gems provided by a gembox are reported, not edited |
+| `mrbgem_scaffold` | skeleton of a pure-Ruby gem in `mrbgems/picoruby-<name>/` (optionally enabled). C gems are out of scope: the layout differs per VM (`src/mruby`, `src/mrubyc`) |
+
+Build system finding: the custom command that produces `libmruby.a` in
+`components/picoruby-esp32/CMakeLists.txt` had no `DEPENDS`, so it only ran while the file did not
+exist, and changes to `build_config/*.rb` or to a gem were silently not built. It now depends on the
+selected build config and on everything under `mrbgems/` (not on gems inside the picoruby submodule).
+Checked: scaffold + enable + `qemu_start` rebuilt (66 s) and `require 'mcp_hello'` worked on QEMU.
 
 ## Shell interaction
 
@@ -195,7 +205,7 @@ Still open:
 2. **M2** Port + `device_exec`/`device_log`/`flash` on real hardware
 3. **M3** RBTP `device_upload`/`device_download`
 4. **M4** QEMU (`qemu_start`/`qemu_stop`)
-5. **M5** mrbgem helper
+5. **M5** mrbgem helper (done)
 
 ## Decisions made in M2
 

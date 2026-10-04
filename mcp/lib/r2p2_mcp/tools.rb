@@ -18,6 +18,10 @@ require_relative 'tools/flash'
 require_relative 'tools/qemu_start'
 require_relative 'tools/qemu_stop'
 require_relative 'tools/qemu_status'
+require_relative 'tools/mrbgem_list'
+require_relative 'tools/mrbgem_enable'
+require_relative 'tools/mrbgem_disable'
+require_relative 'tools/mrbgem_scaffold'
 
 module R2p2Mcp
   module Tools
@@ -25,7 +29,8 @@ module R2p2Mcp
       Setup, Build, Clean, JobStatus, JobLog,
       SerialListPorts, SerialConnect, SerialDisconnect,
       DeviceExec, DeviceLog, DeviceReset, DeviceUpload, DeviceDownload, Flash,
-      QemuStart, QemuStop, QemuStatus
+      QemuStart, QemuStop, QemuStatus,
+      MrbgemList, MrbgemEnable, MrbgemDisable, MrbgemScaffold
     ].freeze
   end
 end

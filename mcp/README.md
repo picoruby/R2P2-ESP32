@@ -4,7 +4,7 @@ An [MCP](https://modelcontextprotocol.io/) server that lets an AI assistant buil
 firmware for you. See [DESIGN.md](DESIGN.md) for the full design and roadmap.
 
 > **Status:** build tools, device interaction (serial, shell commands, logs, flash), file transfer
-> and QEMU are implemented; see the milestones in DESIGN.md. The device tools were verified
+> QEMU and mrbgem helpers are implemented; see the milestones in DESIGN.md. The device tools were verified
 > against QEMU only; they have not been tried on real hardware yet.
 
 ## Requirements
@@ -83,6 +83,23 @@ and scripts. The UART is exposed on `tcp://127.0.0.1:5555` and connected like a 
 
 `flash` is not available while connected to QEMU. See [Running on QEMU](../README.md#running-on-qemu-esp32-s3)
 for its limitations (no ADC, WiFi, ...).
+
+### mrbgems
+
+Which gems the firmware contains is decided by `components/picoruby-esp32/build_config/*.rb` (one
+file per architecture x VM). Your own gems live in `mrbgems/` at the repository root.
+
+| tool | arguments | what it does |
+|------|-----------|--------------|
+| `mrbgem_list` | `query`, `enabled_only` | gems (custom first, then picoruby's) and where each is enabled; "via X" means a gembox provides it |
+| `mrbgem_enable` | `name`, `vm`, `arch` | add the gem to the build configs (all four by default); `picoruby-` prefix optional |
+| `mrbgem_disable` | `name`, `vm`, `arch` | remove it; gems provided by a gembox cannot be removed this way |
+| `mrbgem_scaffold` | `name`, `summary`, `author`, `enable` | create `mrbgems/picoruby-<name>/` (pure Ruby: `mrbgem.rake`, `mrblib`, `sig`, `test`, `README.md`), usable as `require "<name>"` on both VMs |
+
+After changing gems, run `build` (or `qemu_start` to try it without hardware). Example: `mrbgem_scaffold`
+with `enable: true`, edit `mrbgems/picoruby-<name>/mrblib/<name>.rb`, `qemu_start`, then `device_upload`
+a script that requires it and `device_exec` it. Gems with C code are not scaffolded; copy an existing
+gem (e.g. `picoruby-base64`) as a starting point.
 
 `sdkconfigs` are names of the fragment files under `sdkconfigs/` (e.g. `usb_console`,
 `spiram`), the same ones you would put in `SDKCONFIG_DEFAULTS`. `use_wifi` sets `USE_WIFI=1`.

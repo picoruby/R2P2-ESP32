@@ -299,6 +299,19 @@ If the serial port isn't auto-detected correctly (e.g. multiple devices connecte
 $ PORT=/dev/tty.usbserial-0001 rake flash
 ```
 
+### Custom mrbgems
+
+Put your own gems in `mrbgems/` at the project root (e.g. `mrbgems/picoruby-my_sensor/` with
+`mrbgem.rake` and `mrblib/my_sensor.rb`; see `picoruby-base64` for a layout) and add them to the
+build configs in `components/picoruby-esp32/build_config/*.rb`:
+
+```ruby
+conf.gem gemdir: File.expand_path('../../../mrbgems/picoruby-my_sensor', __dir__)
+```
+
+Then `require 'my_sensor'` on the device. A change to a build config or to anything under `mrbgems/`
+makes the next `rake build` rebuild libmruby.
+
 ### Uploading and Downloading Files from the Host
 
 `rake picomodem:put` / `rake picomodem:get` transfer a file over the serial port with the host
