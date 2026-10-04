@@ -15,13 +15,17 @@ require_relative 'tools/device_reset'
 require_relative 'tools/device_upload'
 require_relative 'tools/device_download'
 require_relative 'tools/flash'
+require_relative 'tools/qemu_start'
+require_relative 'tools/qemu_stop'
+require_relative 'tools/qemu_status'
 
 module R2p2Mcp
   module Tools
     ALL = [
       Setup, Build, Clean, JobStatus, JobLog,
       SerialListPorts, SerialConnect, SerialDisconnect,
-      DeviceExec, DeviceLog, DeviceReset, DeviceUpload, DeviceDownload, Flash
+      DeviceExec, DeviceLog, DeviceReset, DeviceUpload, DeviceDownload, Flash,
+      QemuStart, QemuStop, QemuStatus
     ].freeze
   end
 end

@@ -1,6 +1,6 @@
 # R2P2-ESP32 MCP server — design notes
 
-Status: M1 (build tools), M2 (serial, shell, log, flash) and M3 (RBTP file transfer) implemented; M2 and M3 verified on QEMU over TCP only. M4 onwards not started.
+Status: M1 (build tools), M2 (serial, shell, log, flash), M3 (RBTP file transfer) and M4 (QEMU) implemented; M2 to M4 verified on QEMU only. M5 not started.
 
 An MCP server for developers of PicoRuby firmware on ESP32. It lets an AI assistant run the
 whole loop: build → flash → talk to the device → read logs → fix, plus a no-hardware loop on QEMU.
@@ -72,8 +72,9 @@ triggers `reconfigure` (see README).
 
 | tool | what it does |
 |------|--------------|
-| `qemu_start` | start QEMU in a container, connect the Port to it |
-| `qemu_stop`  | stop the container |
+| `qemu_start` | `rake qemu_serve` in Docker (or native), wait for the shell, connect the Port to it |
+| `qemu_status` | running / building, tail of the rake output |
+| `qemu_stop`  | stop the container (`docker stop`) |
 
 Meant for checks that need no peripherals (logic, scripts under `/home`, boot checks).
 
@@ -117,8 +118,9 @@ Reference: `components/picoruby-esp32/picoruby/mrbgems/picoruby-picomodem` (READ
 
 | tool | what it does |
 |------|--------------|
-| `qemu_start` | start QEMU in a container, connect the Port to it |
-| `qemu_stop`  | stop the container |
+| `qemu_start` | `rake qemu_serve` in Docker (or native), wait for the shell, connect the Port to it |
+| `qemu_status` | running / building, tail of the rake output |
+| `qemu_stop`  | stop the container (`docker stop`) |
 
 Meant for checks that need no peripherals (logic, scripts under `/home`, boot checks).
 
@@ -162,20 +164,16 @@ Investigated 2026-10-04 with the existing `r2p2-esp32-idf:v5.5.4` image and `bui
 - `idf.py qemu` (foreground) hard-codes `-serial mon:stdio`. The `mon:` multiplexer treats Ctrl-A
   (0x01) as an escape (`Ctrl-A x` quits QEMU), which would corrupt binary transfers over stdio. So
   we do not use stdio.
-- **Plan**: run `qemu-system-xtensa` directly in the container with `-serial tcp:0.0.0.0:5555,server,nowait`
-  and publish `-p 127.0.0.1:5555:5555`. Arguments are the ones `idf.py qemu` prints, minus
-  `-serial mon:stdio`, with `-m 8M`:
-
-  ```
-  qemu-system-xtensa -M esp32s3 -m 8M \
-    -drive file=build-qemu/qemu_flash.bin,if=mtd,format=raw \
-    -drive file=build-qemu/qemu_efuse.bin,if=none,format=raw,id=efuse \
-    -global driver=nvram.esp32s3.efuse,property=drive,value=efuse \
-    -global driver=timer.esp32s3.timg,property=wdt_disable,value=true \
-    -global driver=ssi_psram,property=is_octal,value=true \
-    -nic user,model=open_eth -nographic \
-    -serial tcp:0.0.0.0:5555,server,nowait
-  ```
+- **Implementation**: `rake qemu_serve` (rakelib/qemu.rake; `docker:qemu_serve` runs it in the
+  container with a fixed container name and `-p 127.0.0.1:5555:5555`). It builds `build-qemu`
+  (running `setup_qemu` and the eFuse step first if needed), regenerates `qemu_flash.bin` with
+  `esptool merge_bin` like `idf.py qemu` does, then `exec`s `qemu-system-xtensa` with the arguments
+  `idf.py qemu` prints, minus `-serial mon:stdio`, plus `-serial tcp:HOST:PORT,server,nowait`.
+  It prints `[qemu_serve] ready ...` just before starting QEMU; `Qemu` (lib/r2p2_mcp/qemu.rb)
+  waits for that marker, then retries connecting (Docker accepts on the published port before QEMU
+  listens) until the shell prompt shows.
+- Regenerating the flash image on every start gives a fresh `/home` per session (the guest used to
+  modify the image in place), so there is no state to carry over or clean up.
 
 Verified (manually, prototype scripts, not committed):
 
@@ -185,12 +183,10 @@ Verified (manually, prototype scripts, not committed):
 - Observed: the first byte read after `0x02` was `\n`, not `0x06`, because the shell's prompt
   redraw was still in flight; the transfer succeeded anyway. The client must scan for `0x06`.
 
+Measured: `qemu_start` takes about 25 s with an up-to-date `build-qemu` (incremental build + boot).
+
 Still open:
 
-- `qemu_start` needs `build-qemu/` to exist (`setup_qemu`, eFuse image). Decide whether it
-  builds it on demand (job) or errors out telling the user to run `setup`.
-- `qemu_flash.bin` is modified by the running guest (the shell populates `/bin/*` on boot);
-  decide whether to work on a copy per session.
 - Docker on macOS (`-p` publishing works; file-sharing backend caveats in README apply).
 
 ## Milestones

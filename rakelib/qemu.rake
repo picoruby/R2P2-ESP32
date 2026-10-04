@@ -29,3 +29,47 @@ PICORB_VMS.each do |name, vm|
     end
   end
 end
+
+# Builds build-qemu, regenerates its flash image (so every run starts from a fresh /home, as
+# `idf.py qemu` does) and runs QEMU with the UART on a TCP port. `idf.py qemu` cannot do this: it
+# fixes the UART to `-serial mon:stdio`, whose Ctrl-A escape breaks binary transfers. Used by the
+# MCP server (mcp/); connect with any TCP client, e.g. `nc 127.0.0.1 5555`. Ctrl-C stops QEMU.
+#
+# QEMU_SERIAL_PORT (default 5555) and QEMU_SERIAL_HOST (default 127.0.0.1; 0.0.0.0 in Docker) pick
+# where it listens. The line "[qemu_serve] ready ..." is printed just before QEMU starts.
+def qemu_serve(vm = nil)
+  Rake::Task[:setup_qemu].invoke unless File.exist?(File.join(QEMU_BUILD_DIR, "sdkconfig"))
+  Rake::Task[:qemu_efuse].invoke
+  sh "idf.py -B #{QEMU_BUILD_DIR} #{"-D PICORB_VM=#{vm}" if vm} build"
+
+  flash_size = File.read(File.join(QEMU_BUILD_DIR, "sdkconfig"))[/^CONFIG_ESPTOOLPY_FLASHSIZE="(\w+)"/, 1]
+  FileUtils.cd(QEMU_BUILD_DIR) do
+    sh "python3 -m esptool --chip=esp32s3 merge_bin --output=qemu_flash.bin --fill-flash-size=#{flash_size} @flash_args"
+  end
+
+  host = ENV.fetch("QEMU_SERIAL_HOST", "127.0.0.1")
+  port = ENV.fetch("QEMU_SERIAL_PORT", "5555")
+  qemu_args = [
+    "-M", "esp32s3", "-m", "8M",
+    "-drive", "file=#{QEMU_BUILD_DIR}/qemu_flash.bin,if=mtd,format=raw",
+    "-drive", "file=#{QEMU_BUILD_DIR}/qemu_efuse.bin,if=none,format=raw,id=efuse",
+    "-global", "driver=nvram.esp32s3.efuse,property=drive,value=efuse",
+    "-global", "driver=timer.esp32s3.timg,property=wdt_disable,value=true",
+    "-global", "driver=ssi_psram,property=is_octal,value=true",
+    "-nic", "user,model=open_eth", "-nographic",
+    "-serial", "tcp:#{host}:#{port},server,nowait",
+  ]
+  puts "[qemu_serve] ready: UART on tcp://#{host}:#{port}"
+  $stdout.flush
+  exec "qemu-system-xtensa", *qemu_args
+end
+
+desc "Run QEMU (ESP32-S3) with the UART on a TCP port (QEMU_SERIAL_PORT, default 5555), keeping the configured VM"
+task(:qemu_serve) { qemu_serve }
+
+PICORB_VMS.each do |name, vm|
+  namespace name do
+    desc "Run QEMU (ESP32-S3) with the UART on a TCP port, with #{name} VM"
+    task(:qemu_serve) { qemu_serve(vm) }
+  end
+end

@@ -332,6 +332,12 @@ $ rake qemu           # whichever VM is currently configured in build-qemu (defa
 
 This drops you into the `picoruby-shell` prompt over the emulated UART. Use `Ctrl-A X` to quit QEMU (`-nographic` mode).
 
+To expose the UART on a TCP port instead of the terminal (used by the [MCP server](mcp/README.md);
+`mon:stdio`'s Ctrl-A escape would corrupt binary transfers), run `rake qemu_serve`,
+`rake docker:qemu_serve` (add `picoruby:` / `femtoruby:` to pick the VM) and connect to
+`127.0.0.1:5555` (`QEMU_SERIAL_PORT` changes it), e.g. with `nc 127.0.0.1 5555`. It starts from a fresh
+`storage` image every time and stops with Ctrl-C.
+
 **Known QEMU limitations:**
 
 - **USB Serial/JTAG console is not emulated.** `rake setup_qemu` builds with `sdkconfigs/qemu` (UART console) regardless of your usual `SDKCONFIG_DEFAULTS`, since a USB Serial/JTAG console build hangs forever waiting for a host connection that QEMU never provides.

@@ -3,10 +3,9 @@
 An [MCP](https://modelcontextprotocol.io/) server that lets an AI assistant build the R2P2-ESP32
 firmware for you. See [DESIGN.md](DESIGN.md) for the full design and roadmap.
 
-> **Status:** build tools, device interaction (serial, shell commands, logs, flash) and file
-> transfer are implemented. QEMU start/stop is planned; see the milestones in DESIGN.md.
-> The device tools were verified against QEMU over TCP; they have not been tried on real
-> hardware yet.
+> **Status:** build tools, device interaction (serial, shell commands, logs, flash), file transfer
+> and QEMU are implemented; see the milestones in DESIGN.md. The device tools were verified
+> against QEMU only; they have not been tried on real hardware yet.
 
 ## Requirements
 
@@ -69,6 +68,21 @@ to the rake task, so it works for serial devices and QEMU alike. The binary traf
 
 Console output is rendered to plain text (the shell redraws its prompt with escape sequences on
 every keystroke, which is applied rather than shown).
+
+### QEMU
+
+Run the firmware without hardware (ESP32-S3 on QEMU; no peripherals, no WiFi), for checking logic
+and scripts. The UART is exposed on `tcp://127.0.0.1:5555` and connected like a serial port, so all
+`device_*` tools work on it.
+
+| tool | arguments | what it does |
+|------|-----------|--------------|
+| `qemu_start` | `vm`, `native`, `timeout` (default 120 s) | `rake qemu_serve`: builds `build-qemu` (set up automatically; the first time takes minutes), starts QEMU in Docker with a fresh `/home`, connects to its shell. If it is still building after `timeout`, it keeps going in the background. |
+| `qemu_status` | `lines` | running / building, and the tail of its rake / build output |
+| `qemu_stop` | | stop QEMU (its `/home` is discarded) |
+
+`flash` is not available while connected to QEMU. See [Running on QEMU](../README.md#running-on-qemu-esp32-s3)
+for its limitations (no ADC, WiFi, ...).
 
 `sdkconfigs` are names of the fragment files under `sdkconfigs/` (e.g. `usb_console`,
 `spiram`), the same ones you would put in `SDKCONFIG_DEFAULTS`. `use_wifi` sets `USE_WIFI=1`.
