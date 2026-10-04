@@ -1,11 +1,12 @@
 # R2P2-ESP32 MCP server
 
-An [MCP](https://modelcontextprotocol.io/) server that lets an AI assistant build the R2P2-ESP32
-firmware for you. See [DESIGN.md](DESIGN.md) for the full design and roadmap.
+An [MCP](https://modelcontextprotocol.io/) server for developers of PicoRuby firmware on ESP32. It
+lets an AI assistant run the whole loop: build, flash, talk to the device (shell commands, logs, file
+transfer), and try things without hardware on QEMU, plus manage mrbgems.
 
-> **Status:** build tools, device interaction (serial, shell commands, logs, flash), file transfer
-> QEMU and mrbgem helpers are implemented; see the milestones in DESIGN.md. The device tools were verified
-> against QEMU only; they have not been tried on real hardware yet.
+> **Status:** the device tools were verified against QEMU only; they have not been tried on real
+> hardware yet. Open points for real boards: opening a USB Serial/JTAG port may reset the board
+> (DTR/RTS), and `flash` reconnects after a fixed 2 s wait.
 
 ## Requirements
 
