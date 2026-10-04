@@ -208,8 +208,8 @@ $ rake docker:picoruby:qemu   # or docker:femtoruby:qemu, docker:qemu
 $ rake docker:shell
 ```
 
-Unlike the native build, `docker:*` tasks don't read `SDKCONFIG_DEFAULTS`/`USE_WIFI`/etc. from
-your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
+Unlike the native build, `docker:*` tasks only forward `SDKCONFIG_DEFAULTS` and `USE_WIFI` from your
+shell (when set); for any other variable -- or to keep them out of your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
 pass it to the container as-is if it exists). Docker's `--env-file` format doesn't strip quotes
 the way a shell does, so **don't quote the value**:
 
@@ -299,6 +299,32 @@ If the serial port isn't auto-detected correctly (e.g. multiple devices connecte
 $ PORT=/dev/tty.usbserial-0001 rake flash
 ```
 
+### Custom mrbgems
+
+Put your own gems in `mrbgems/` at the project root (e.g. `mrbgems/picoruby-my_sensor/` with
+`mrbgem.rake` and `mrblib/my_sensor.rb`; see `picoruby-base64` for a layout) and add them to the
+build configs in `components/picoruby-esp32/build_config/*.rb`:
+
+```ruby
+conf.gem gemdir: File.expand_path('../../../mrbgems/picoruby-my_sensor', __dir__)
+```
+
+Then `require 'my_sensor'` on the device. A change to a build config or to anything under `mrbgems/`
+makes the next `rake build` rebuild libmruby.
+
+### Uploading and Downloading Files from the Host
+
+`rake picomodem:put` / `rake picomodem:get` transfer a file over the serial port with the host
+client of [picoruby-picomodem](https://github.com/picoruby/picoruby/tree/master/mrbgems/picoruby-picomodem)
+(the same protocol the Web Terminal uses). The shell must be at its prompt, and the host `picoruby`
+built by `rake setup_*` is used (set `PICORUBY` to use another one).
+
+```sh
+$ rake "picomodem:put[hello.rb,/home/hello.rb]"   # REMOTE defaults to LOCAL's basename
+$ rake "picomodem:get[/home/hello.rb,hello.rb]"   # LOCAL defaults to REMOTE's basename
+$ PORT=/dev/ttyACM1 rake "picomodem:put[hello.rb]"
+```
+
 ### Running on QEMU (ESP32-S3)
 
 R2P2-ESP32 can be run under [QEMU](https://github.com/espressif/qemu) targeting ESP32-S3, without any real hardware. This uses ESP-IDF's built-in `idf.py qemu` support and the `qemu-xtensa` tool package (`idf_tools.py install qemu-xtensa`).
@@ -318,6 +344,12 @@ $ rake qemu           # whichever VM is currently configured in build-qemu (defa
 ```
 
 This drops you into the `picoruby-shell` prompt over the emulated UART. Use `Ctrl-A X` to quit QEMU (`-nographic` mode).
+
+To expose the UART on a TCP port instead of the terminal (used by the [MCP server](mcp/README.md);
+`mon:stdio`'s Ctrl-A escape would corrupt binary transfers), run `rake qemu_serve`,
+`rake docker:qemu_serve` (add `picoruby:` / `femtoruby:` to pick the VM) and connect to
+`127.0.0.1:5555` (`QEMU_SERIAL_PORT` changes it), e.g. with `nc 127.0.0.1 5555`. It starts from a fresh
+`storage` image every time and stops with Ctrl-C.
 
 **Known QEMU limitations:**
 

@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "r2p2-esp32": {
+      "command": "mcp/bin/r2p2-esp32-mcp"
+    }
+  }
+}
