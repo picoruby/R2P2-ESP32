@@ -1,6 +1,6 @@
 # R2P2-ESP32 MCP server — design notes
 
-Status: M1 (build tools) and M2 (serial, shell, log, flash) implemented; M2 verified on QEMU over TCP only. M3 onwards not started.
+Status: M1 (build tools), M2 (serial, shell, log, flash) and M3 (RBTP file transfer) implemented; M2 and M3 verified on QEMU over TCP only. M4 onwards not started.
 
 An MCP server for developers of PicoRuby firmware on ESP32. It lets an AI assistant run the
 whole loop: build → flash → talk to the device → read logs → fix, plus a no-hardware loop on QEMU.
@@ -64,11 +64,56 @@ triggers `reconfigure` (see README).
 | `device_eval`  | (not implemented) run Ruby code through `irb` |
 | `device_run`   | (not implemented; `device_exec ./app.rb` with a timeout covers it) |
 | `device_ls`    | (not implemented; use `device_exec ls`) |
-| `device_upload`, `device_download` | RBTP file transfer (see below) |
+| `device_upload`, `device_download` | RBTP file transfer (see below; via `rake picomodem:*`); upload takes a local file or inline `content` |
 | `device_reset` | shell `reboot`, capture the boot log (no DTR/RTS toggling) |
 | `device_log`   | tail the ring buffer; detect panic / backtrace |
 
 ### QEMU
+
+| tool | what it does |
+|------|--------------|
+| `qemu_start` | start QEMU in a container, connect the Port to it |
+| `qemu_stop`  | stop the container |
+
+Meant for checks that need no peripherals (logic, scripts under `/home`, boot checks).
+
+### mrbgem helper (later)
+
+`mrbgem_scaffold` (`mrbgem.rake`, `mrblib/`, `src/`) and adding a gem to `build_config/*.rb`.
+
+## Shell interaction
+
+The shell does line editing, so every keystroke is echoed with ANSI sequences
+(`\e[1G$> echo\e[0K...`). `device_exec`:
+
+1. strip ANSI sequences from the received stream,
+2. write the command + `\r`,
+3. read until the prompt `$> ` reappears (with timeout), drop the echoed command line.
+
+## File transfer (RBTP / PicoModem)
+
+Reference: `components/picoruby-esp32/picoruby/mrbgems/picoruby-picomodem` (README, `tools/picomodem.rb`).
+
+- We reuse the upstream host client instead of reimplementing the protocol. `rakelib/picomodem.rake`
+  adds `rake picomodem:put[LOCAL,REMOTE]` / `picomodem:get[REMOTE,LOCAL]`, which run
+  `tools/picomodem.rb` on the host `picoruby` built by `rake setup` (`PORT` selects the device, like
+  `rake flash`). The MCP tools call these tasks.
+- The client opens a device path (`stty -F`, `File.open`), but the server wants to keep its own
+  connection (buffered log, no DTR/RTS toggling on reopen, QEMU has no device path at all). So
+  `PtyBridge` exposes the connected Port as a pty (raw mode, so nothing is echoed back), relays bytes
+  both ways, and its path is passed as `PORT`. One code path for serial and QEMU.
+- Frame: `STX | len(2, BE) | cmd | payload | CRC16(2, BE)`; only `FILE_READ`/`FILE_WRITE`/`CHUNK`/`ABORT`
+  exist, so `ls`/`rm` go through the shell. Both directions are checked with CRC32.
+- While a transfer runs the Port buffer keeps receiving the binary traffic; afterwards it is replaced
+  by one `[rbtp] ...` line (`Port#replace_since`).
+- Upstream quirk: after `FILE_ACK` the device opens the file and, if it cannot (bad directory), sends
+  `ERROR` and ends the session at once, but the client already sends chunks, which land on the shell
+  prompt as keystrokes (an STX in them can even start a new session that times out after 5 s). We
+  cannot change the submodule, so after a failed transfer `Device.transfer` sends `\r` and waits until the
+  prompt is back. A proper fix upstream: open the file before sending `FILE_ACK`.
+- Measured on QEMU (UART): 20 KB up in 6.0 s, down in 3.6 s.
+
+## QEMU
 
 | tool | what it does |
 |------|--------------|
@@ -102,6 +147,13 @@ Reference: `components/picoruby-esp32/picoruby/mrbgems/picoruby-picomodem` (READ
   frames → read the trailing `[PicoModem] ...` line. The Port ring buffer must be paused
   (not parsed as shell output) while a transfer is in progress.
 - Both directions are verified end to end with CRC32 (the device returns it in `DONE_ACK`).
+- Implemented in `lib/r2p2_mcp/rbtp.rb` (`Channel`: frames over a read cursor on the Port buffer;
+  `Session`: put / get). The binary traffic is replaced in the Port buffer by one `[rbtp] ...` line.
+- Device quirk: after `FILE_ACK` the device opens the file and, if it cannot (bad directory), sends
+  `ERROR` and ends the session at once. A `CHUNK` sent meanwhile would land on the shell prompt as
+  keystrokes (its STX even starts a new session), so the client waits 150 ms for an early `ERROR`
+  before the first chunk.
+- Measured on QEMU (UART): 20 KB up in 5.2 s, down in 3.1 s.
 
 ## QEMU
 
@@ -128,7 +180,7 @@ Investigated 2026-10-04 with the existing `r2p2-esp32-idf:v5.5.4` image and `bui
 Verified (manually, prototype scripts, not committed):
 
 - Boot reaches `$> `, and `echo hello` works over the TCP socket from a host Ruby `TCPSocket`.
-- **RBTP works over the QEMU UART console**: uploading 3000 random bytes (containing 0x01/0x02)
+- **RBTP works over the QEMU UART console** (first checked with a throwaway client): uploading 3000 random bytes (containing 0x01/0x02)
   to `/home/rbtp_test.bin` finished with `DONE_ACK` status 0 and a matching CRC32.
 - Observed: the first byte read after `0x02` was `\n`, not `0x06`, because the shell's prompt
   redraw was still in flight; the transfer succeeded anyway. The client must scan for `0x06`.
@@ -137,7 +189,6 @@ Still open:
 
 - `qemu_start` needs `build-qemu/` to exist (`setup_qemu`, eFuse image). Decide whether it
   builds it on demand (job) or errors out telling the user to run `setup`.
-- `get` direction was not exercised on QEMU yet.
 - `qemu_flash.bin` is modified by the running guest (the shell populates `/bin/*` on boot);
   decide whether to work on a copy per session.
 - Docker on macOS (`-p` publishing works; file-sharing backend caveats in README apply).

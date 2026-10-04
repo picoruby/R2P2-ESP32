@@ -12,6 +12,8 @@ require_relative 'tools/serial_disconnect'
 require_relative 'tools/device_exec'
 require_relative 'tools/device_log'
 require_relative 'tools/device_reset'
+require_relative 'tools/device_upload'
+require_relative 'tools/device_download'
 require_relative 'tools/flash'
 
 module R2p2Mcp
@@ -19,7 +21,7 @@ module R2p2Mcp
     ALL = [
       Setup, Build, Clean, JobStatus, JobLog,
       SerialListPorts, SerialConnect, SerialDisconnect,
-      DeviceExec, DeviceLog, DeviceReset, Flash
+      DeviceExec, DeviceLog, DeviceReset, DeviceUpload, DeviceDownload, Flash
     ].freeze
   end
 end

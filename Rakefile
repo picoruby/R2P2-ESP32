@@ -23,4 +23,4 @@ desc "Build, flash, and monitor the ESP32 project"
 task :all => %w[build flash monitor]
 
 # All other tasks live under rakelib/ (auto-loaded by `rake`): setup.rake, build.rake, qemu.rake,
-# flash.rake, clean.rake, wifi_config.rake, docker.rake.
+# flash.rake, picomodem.rake, clean.rake, wifi_config.rake, docker.rake.

@@ -54,6 +54,20 @@ module R2p2Mcp
         [lines.drop(1), status] # drop the echoed command line
       end
 
+      # Runs a file transfer through a pty bridged to the connected port: the block gets the pty path and
+      # returns a CommandRunner::Result. The binary traffic is replaced in the log by one `[rbtp] label` line.
+      def transfer(label)
+        port = port!
+        start = port.position
+        bridge = PtyBridge.new(port)
+        result = yield bridge.path
+        recover_prompt(port) unless result.success
+        result
+      ensure
+        bridge&.close
+        port&.replace_since(start, "[rbtp] #{label}\r\n") if start
+      end
+
       # `reboot` the device and return the boot log up to the next prompt.
       def reset(timeout: 30)
         port = port!
@@ -76,6 +90,14 @@ module R2p2Mcp
       end
 
       private
+
+      # A transfer that failed midway can leave the shell inside a half-started session (it times out
+      # after a few seconds) or with stray input; wait until the prompt is back.
+      def recover_prompt(port)
+        start = port.position
+        port.write("\r")
+        wait_for_prompt(start, 8)
+      end
 
       # Gets a hung command back to the prompt: :timeout when that worked, else :stuck.
       def interrupt(port, start)

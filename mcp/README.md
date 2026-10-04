@@ -3,8 +3,8 @@
 An [MCP](https://modelcontextprotocol.io/) server that lets an AI assistant build the R2P2-ESP32
 firmware for you. See [DESIGN.md](DESIGN.md) for the full design and roadmap.
 
-> **Status:** build tools and device interaction (serial, shell commands, logs, flash) are
-> implemented. File transfer and QEMU start/stop are planned; see the milestones in DESIGN.md.
+> **Status:** build tools, device interaction (serial, shell commands, logs, flash) and file
+> transfer are implemented. QEMU start/stop is planned; see the milestones in DESIGN.md.
 > The device tools were verified against QEMU over TCP; they have not been tried on real
 > hardware yet.
 
@@ -57,7 +57,15 @@ These talk to the device's `picoruby-shell` through one connection held by the s
 | `device_exec` | `command` (required), `timeout` (default 10 s) | run a shell command, return its output when the prompt returns. On timeout: Ctrl-C, then Ctrl-D if still stuck (e.g. in `irb`). |
 | `device_log` | `lines` (default 100), `since_last` | everything the device printed since connecting (last 256 KiB kept). Crash markers (`Guru Meditation`, `Backtrace:`, `assert failed`, ...) are listed first. |
 | `device_reset` | `timeout` (default 30 s) | shell `reboot`, returns the boot log up to the next prompt |
+| `device_upload` | `remote_path`, `local_path` or `content` | write a file to the device over RBTP (PicoModem) with `rake picomodem:put`, CRC32-checked. `content` uploads text without a local file, e.g. a script to run next. Default `remote_path`: basename of `local_path`. |
+| `device_download` | `remote_path` (required), `local_path` | read a file from the device over RBTP (`rake picomodem:get`) and save it locally |
 | `flash` | `port`, `reconnect` (default true) | host-side `rake flash` as a background job. Releases the serial port first and reconnects after success. Not available while connected to a `tcp://` port. |
+
+File transfer needs the shell at its prompt (not inside `irb`) and the host `picoruby` built by
+`setup` (on macOS, a Docker-only build leaves a Linux binary there; run `rake setup_<target>`
+natively once). The server keeps its connection open: it bridges the port to a pty and hands that
+to the rake task, so it works for serial devices and QEMU alike. The binary traffic is hidden from
+`device_log`; one `[rbtp] put ...` line is logged instead.
 
 Console output is rendered to plain text (the shell redraws its prompt with escape sequences on
 every keystroke, which is applied rather than shown).
@@ -74,7 +82,7 @@ Pass the same `sdkconfigs` / `use_wifi` to `build` as to `setup`. Changing them 
 2. `job_status` until it succeeds
 3. `build` with `vm: "picoruby"`, then `job_status` / `job_log`
 4. `flash`, then `job_status`; the server reconnects to the port afterwards
-5. `device_exec` (`ls`, `./app.rb`, ...) and `device_log` to see what happened
+5. `device_upload` your script, then `device_exec` (`./app.rb`) and `device_log` to see what happened
 
 ## Notes
 

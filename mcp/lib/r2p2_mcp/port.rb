@@ -12,6 +12,7 @@ module R2p2Mcp
     DEFAULT_BAUD = 115_200
 
     attr_reader :target
+    attr_writer :tee # called with every chunk received (see PtyBridge)
 
     def self.open(target, baud: DEFAULT_BAUD)
       io =
@@ -71,6 +72,14 @@ module R2p2Mcp
       end
     end
 
+    # Replaces everything received since +from+ with +text+ (used to keep binary transfers out of the log).
+    def replace_since(from, text)
+      @mutex.synchronize do
+        from = @base if from < @base
+        @buffer = @buffer.byteslice(0, from - @base) + text.b
+      end
+    end
+
     def eof? = @eof
 
     def close
@@ -114,6 +123,7 @@ module R2p2Mcp
     end
 
     def append(data)
+      @tee&.call(data)
       @mutex.synchronize do
         @buffer << data.b
         if @buffer.bytesize > MAX_BUFFER

@@ -299,6 +299,19 @@ If the serial port isn't auto-detected correctly (e.g. multiple devices connecte
 $ PORT=/dev/tty.usbserial-0001 rake flash
 ```
 
+### Uploading and Downloading Files from the Host
+
+`rake picomodem:put` / `rake picomodem:get` transfer a file over the serial port with the host
+client of [picoruby-picomodem](https://github.com/picoruby/picoruby/tree/master/mrbgems/picoruby-picomodem)
+(the same protocol the Web Terminal uses). The shell must be at its prompt, and the host `picoruby`
+built by `rake setup_*` is used (set `PICORUBY` to use another one).
+
+```sh
+$ rake "picomodem:put[hello.rb,/home/hello.rb]"   # REMOTE defaults to LOCAL's basename
+$ rake "picomodem:get[/home/hello.rb,hello.rb]"   # LOCAL defaults to REMOTE's basename
+$ PORT=/dev/ttyACM1 rake "picomodem:put[hello.rb]"
+```
+
 ### Running on QEMU (ESP32-S3)
 
 R2P2-ESP32 can be run under [QEMU](https://github.com/espressif/qemu) targeting ESP32-S3, without any real hardware. This uses ESP-IDF's built-in `idf.py qemu` support and the `qemu-xtensa` tool package (`idf_tools.py install qemu-xtensa`).
