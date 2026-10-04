@@ -18,8 +18,13 @@ transfer), and try things without hardware on QEMU, plus manage mrbgems.
 
 ```sh
 cd mcp
-bundle install   # installs into mcp/.bundle
+bundle install
 ```
+
+Use the same Ruby the MCP client will start the server with. If the gems are missing, the server
+exits at startup with a hint on stderr (your client shows it as the server's error); run the
+`bundle install` it names, then restart the server. The `rubocop` gem (development group) is
+not needed to run the server: `bundle config set --local without development` skips it.
 
 ## Register with your MCP client
 
