@@ -1,0 +1,7 @@
+# Applies to mcp/ only (rubocop looks for the nearest config upwards from the file).
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+
+Naming/MethodParameterName:
+  AllowedNames: [vm, io] # vm is a tool argument name

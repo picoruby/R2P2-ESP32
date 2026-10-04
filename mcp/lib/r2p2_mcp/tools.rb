@@ -1,0 +1,25 @@
+# frozen_string_literal: true
+
+require_relative 'tools/helpers'
+require_relative 'tools/setup'
+require_relative 'tools/build'
+require_relative 'tools/clean'
+require_relative 'tools/job_status'
+require_relative 'tools/job_log'
+require_relative 'tools/serial_list_ports'
+require_relative 'tools/serial_connect'
+require_relative 'tools/serial_disconnect'
+require_relative 'tools/device_exec'
+require_relative 'tools/device_log'
+require_relative 'tools/device_reset'
+require_relative 'tools/flash'
+
+module R2p2Mcp
+  module Tools
+    ALL = [
+      Setup, Build, Clean, JobStatus, JobLog,
+      SerialListPorts, SerialConnect, SerialDisconnect,
+      DeviceExec, DeviceLog, DeviceReset, Flash
+    ].freeze
+  end
+end

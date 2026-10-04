@@ -3,6 +3,7 @@ DOCKER_IDF_TAG = ENV.fetch("ESP_IDF_DOCKER_TAG", "v5.5.4")
 DOCKER_DIR     = File.join(R2P2_ESP32_ROOT, "docker")
 DOCKER_IMAGE   = "r2p2-esp32-idf:#{DOCKER_IDF_TAG}"
 DOCKER_MOUNT   = "/project"
+DOCKER_PASS_ENV = %w[SDKCONFIG_DEFAULTS USE_WIFI].freeze
 
 require "shellwords"
 
@@ -23,13 +24,15 @@ def docker_run(cmd, tty: false)
 
   tty_args = tty ? "-it" : ""
   env_file_arg = File.exist?(File.join(R2P2_ESP32_ROOT, ".env")) ? "--env-file #{R2P2_ESP32_ROOT}/.env" : ""
+  # Forward these only when set on the host (`-e NAME` without a value); they take precedence over .env.
+  pass_env_args = DOCKER_PASS_ENV.select { |name| ENV.key?(name) }.map { |name| "-e #{name}" }.join(" ")
   full_cmd = "#{DOCKER_BUNDLE_SHIM}; #{cmd}"
   sh <<~SHELL
     docker run --rm #{tty_args} \
     -v #{R2P2_ESP32_ROOT}:#{DOCKER_MOUNT} -w #{DOCKER_MOUNT} \
     -u #{Process.uid}:#{Process.gid} -e HOME=/tmp \
     -e IDF_GIT_SAFE_DIR='*' -e BUNDLE_PATH=#{DOCKER_MOUNT}/.bundle-docker \
-    -e CCACHE_DIR=#{DOCKER_MOUNT}/.ccache #{env_file_arg} \
+    -e CCACHE_DIR=#{DOCKER_MOUNT}/.ccache #{env_file_arg} #{pass_env_args} \
     #{DOCKER_IMAGE} bash -lc #{Shellwords.escape(full_cmd)}
   SHELL
 end

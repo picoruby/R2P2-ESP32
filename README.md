@@ -208,8 +208,8 @@ $ rake docker:picoruby:qemu   # or docker:femtoruby:qemu, docker:qemu
 $ rake docker:shell
 ```
 
-Unlike the native build, `docker:*` tasks don't read `SDKCONFIG_DEFAULTS`/`USE_WIFI`/etc. from
-your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
+Unlike the native build, `docker:*` tasks only forward `SDKCONFIG_DEFAULTS` and `USE_WIFI` from your
+shell (when set); for any other variable -- or to keep them out of your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
 pass it to the container as-is if it exists). Docker's `--env-file` format doesn't strip quotes
 the way a shell does, so **don't quote the value**:
 

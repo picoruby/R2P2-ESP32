@@ -1,0 +1,91 @@
+# R2P2-ESP32 MCP server
+
+An [MCP](https://modelcontextprotocol.io/) server that lets an AI assistant build the R2P2-ESP32
+firmware for you. See [DESIGN.md](DESIGN.md) for the full design and roadmap.
+
+> **Status:** build tools and device interaction (serial, shell commands, logs, flash) are
+> implemented. File transfer and QEMU start/stop are planned; see the milestones in DESIGN.md.
+> The device tools were verified against QEMU over TCP; they have not been tried on real
+> hardware yet.
+
+## Requirements
+
+- Ruby (the version the repo already requires for building, e.g. 4.0.x) and Bundler
+- Docker (the default build environment; see [Building with Docker](../README.md#building-with-docker))
+- Submodules checked out (`git submodule update --init --recursive`)
+
+## Install
+
+```sh
+cd mcp
+bundle install   # installs into mcp/.bundle
+```
+
+## Register with your MCP client
+
+The repository root has a `.mcp.json`, so Claude Code picks the server up automatically when
+started in this repository (approve it when prompted). For other clients, run
+`mcp/bin/r2p2-esp32-mcp` as a stdio server, for example:
+
+```sh
+claude mcp add r2p2-esp32 -- /path/to/R2P2-ESP32/mcp/bin/r2p2-esp32-mcp
+```
+
+## Tools
+
+Builds take minutes, so `setup`, `build` and `clean` run as **background jobs**: they return a
+job id immediately, and you follow progress with `job_status` / `job_log`. Only one job runs at
+a time. Everything runs in Docker (`rake docker:*`) unless `native: true` is passed.
+
+| tool | arguments | what it does |
+|------|-----------|--------------|
+| `setup` | `target` (required: `esp32`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32p4`, `esp32s3`), `sdkconfigs`, `use_wifi`, `native` | `rake setup_<target>`. Deletes the old `sdkconfig` first, because it caches `SDKCONFIG_DEFAULTS`. |
+| `build` | `vm` (`picoruby` / `femtoruby`; omit to keep the configured one), `sdkconfigs`, `use_wifi`, `native` | `rake [<vm>:]build` |
+| `clean` | `deep`, `native` | `rake clean`, or `deep_clean` with `deep: true` |
+| `job_status` | `job_id` (default: latest) | running / succeeded / failed. On failure, includes extracted error lines and the last 20 log lines. |
+| `job_log` | `job_id`, `lines` (default 100) | tail of the job log |
+
+### Device tools
+
+These talk to the device's `picoruby-shell` through one connection held by the server.
+
+| tool | arguments | what it does |
+|------|-----------|--------------|
+| `serial_list_ports` | | list `/dev/ttyACM*`, `ttyUSB*`, `cu.usb*` ports |
+| `serial_connect` | `port` (required), `baud` | connect to a serial device or `tcp://host:port` (e.g. QEMU's UART) and check for the `$> ` prompt. Replaces a previous connection. |
+| `serial_disconnect` | | release the port (do this before `rake monitor` or a web terminal) |
+| `device_exec` | `command` (required), `timeout` (default 10 s) | run a shell command, return its output when the prompt returns. On timeout: Ctrl-C, then Ctrl-D if still stuck (e.g. in `irb`). |
+| `device_log` | `lines` (default 100), `since_last` | everything the device printed since connecting (last 256 KiB kept). Crash markers (`Guru Meditation`, `Backtrace:`, `assert failed`, ...) are listed first. |
+| `device_reset` | `timeout` (default 30 s) | shell `reboot`, returns the boot log up to the next prompt |
+| `flash` | `port`, `reconnect` (default true) | host-side `rake flash` as a background job. Releases the serial port first and reconnects after success. Not available while connected to a `tcp://` port. |
+
+Console output is rendered to plain text (the shell redraws its prompt with escape sequences on
+every keystroke, which is applied rather than shown).
+
+`sdkconfigs` are names of the fragment files under `sdkconfigs/` (e.g. `usb_console`,
+`spiram`), the same ones you would put in `SDKCONFIG_DEFAULTS`. `use_wifi` sets `USE_WIFI=1`.
+
+Pass the same `sdkconfigs` / `use_wifi` to `build` as to `setup`. Changing them requires running
+`setup` again.
+
+### Typical flow
+
+1. `setup` with `target: "esp32s3"`, `sdkconfigs: ["usb_console", "spiram"]`
+2. `job_status` until it succeeds
+3. `build` with `vm: "picoruby"`, then `job_status` / `job_log`
+4. `flash`, then `job_status`; the server reconnects to the port afterwards
+5. `device_exec` (`ls`, `./app.rb`, ...) and `device_log` to see what happened
+
+## Notes
+
+- Docker only forwards `SDKCONFIG_DEFAULTS` and `USE_WIFI` from the environment (this is how the
+  server passes `sdkconfigs` / `use_wifi`); anything else still goes through `.env`. See
+  [Building with Docker](../README.md#building-with-docker).
+- Job logs are kept in a temporary directory and removed when the server exits.
+
+## Development
+
+```sh
+cd mcp
+bundle exec rubocop   # style check; config in .rubocop.yml (defaults + NewCops)
+```
