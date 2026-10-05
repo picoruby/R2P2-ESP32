@@ -74,6 +74,7 @@ idf_component_register(
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-rng/ports/esp32/rng.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-pwm/ports/esp32/pwm.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-rmt/ports/esp32/rmt.c
+    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-pulse_counter/ports/esp32/pulse_counter.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-watchdog/ports/esp32/watchdog.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/esp32/timing_alt.c
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/cipher.c
@@ -108,6 +109,7 @@ idf_component_register(
     esp_driver_spi
     esp_driver_ledc
     esp_driver_rmt
+    esp_driver_pcnt
     esp_driver_i2c
     esp_adc
     esp_timer

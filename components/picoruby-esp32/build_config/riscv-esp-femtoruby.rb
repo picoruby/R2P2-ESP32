@@ -44,6 +44,7 @@ MRuby::CrossBuild.new("esp32-femtoruby") do |conf|
   # others
   conf.gem core: 'picoruby-esp32'
   conf.gem core: 'picoruby-rmt'
+  conf.gem core: 'picoruby-pulse_counter'
   conf.gem core: 'picoruby-mbedtls'
   conf.gem core: 'picoruby-socket'
   conf.gem core: 'picoruby-network'

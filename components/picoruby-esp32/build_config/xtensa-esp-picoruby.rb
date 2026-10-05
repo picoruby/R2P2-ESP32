@@ -64,10 +64,14 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
 
   # others
   conf.gem core: 'picoruby-rmt'
+  conf.gem core: 'picoruby-pulse_counter'
   conf.gem core: 'picoruby-mbedtls'
   conf.gem core: 'picoruby-socket'
   conf.gem core: 'picoruby-network'
   conf.gem core: 'picoruby-net-mqtt'
   conf.gem core: 'picoruby-net-ntp'
   conf.gem core: 'picoruby-adafruit_sk6812'
+
+  # conf.gem github: 'yuuu/picoruby-debug', branch: 'feature/finish-step-out', path: 'console'
+  conf.gem github: 'yuuu/picoruby-debug', branch: 'feature/finish-step-out'
 end
