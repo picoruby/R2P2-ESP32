@@ -15,6 +15,12 @@ def build_project_description
   JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "project_description.json")))
 end
 
+# Arguments selecting the serial port given by ENV['PORT'] (none when unset, so that the tool
+# auto-detects it).
+def port_args(option = "--port")
+  ENV["PORT"] ? [option, ENV["PORT"]] : []
+end
+
 def on_path(name)
   ENV["PATH"].split(File::PATH_SEPARATOR)
              .map { |dir| File.join(dir, name) }
@@ -159,12 +165,10 @@ task :flash do
   rm_f FLASHED_IMAGES_FILE
   FileUtils.cd(File.join(R2P2_ESP32_ROOT, "build")) do
     if find_esptool
-      port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
-      sh "esptool.py --chip #{chip} #{port} " \
-         "-b 460800 --before default_reset --after hard_reset write_flash @flash_args"
+      sh "esptool.py", "--chip", chip, *port_args,
+         "-b", "460800", "--before", "default_reset", "--after", "hard_reset", "write_flash", "@flash_args"
     else
       espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-      port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
       flash_files = JSON.parse(File.read("flasher_args.json"))["flash_files"]
       flash_files.sort_by { |addr, _file| Integer(addr, 16) }.each do |addr, file|
         sh espflash, "write-bin", addr, file,
@@ -181,11 +185,9 @@ desc "Flash firmware binary to the factory partition"
 task :flash_factory do
   chip = build_project_description["target"]
   if find_esptool
-    port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
-    sh "esptool.py --chip #{chip} #{port} -b 460800 write_flash 0x10000 build/R2P2-ESP32.bin"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "write_flash", "0x10000", "build/R2P2-ESP32.bin"
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-    port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
     sh espflash, "write-bin", "0x10000", "build/R2P2-ESP32.bin", "--chip", chip, "--non-interactive", *port_args
   end
 end
@@ -194,12 +196,10 @@ desc "Erase storage partition and flash storage binary"
 task :flash_storage do
   chip = build_project_description["target"]
   if find_esptool
-    port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
-    sh "esptool.py --chip #{chip} #{port} -b 460800 erase_region 0x210000 0x100000"
-    sh "esptool.py --chip #{chip} #{port} -b 460800 write_flash 0x210000 build/storage.bin"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "erase_region", "0x210000", "0x100000"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "write_flash", "0x210000", "build/storage.bin"
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-    port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
     sh espflash, "erase-region", "0x210000", "0x100000", "--chip", chip, "--non-interactive", *port_args
     sh espflash, "write-bin", "0x210000", "build/storage.bin", "--chip", chip, "--non-interactive", *port_args
   end
@@ -213,13 +213,12 @@ end
 desc "Monitor ESP32 serial output, preferring an existing esp-idf-monitor, otherwise espflash"
 task :monitor do
   desc_json = build_project_description
-  port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
 
   if (monitor_cmd = find_idf_monitor)
-    sh "#{monitor_cmd} #{port} -b #{desc_json['monitor_baud']} build/#{desc_json['app_elf']}"
+    sh(*monitor_cmd.split, *port_args, "-b", desc_json["monitor_baud"].to_s,
+       File.join("build", desc_json["app_elf"]))
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esp-idf-monitor is on PATH."
-    port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
     sh espflash, "monitor",
        "--chip", desc_json["target"],
        "--monitor-baud", desc_json["monitor_baud"].to_s,
