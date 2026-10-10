@@ -1,6 +1,7 @@
 desc "Build the ESP32 project"
 task :build do
   sh "idf.py build"
+  preinstall_system_files
 end
 
 PICORB_VMS.each do |name, vm|
@@ -8,6 +9,7 @@ PICORB_VMS.each do |name, vm|
     desc "Build the ESP32 project with #{name} VM"
     task :build do
       sh "idf.py build -DPICORB_VM=#{vm}"
+      preinstall_system_files
     end
   end
 end
