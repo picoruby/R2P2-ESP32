@@ -18,8 +18,10 @@ if(${PICORB_VM} STREQUAL "mruby")
     -DMRB_TICK_UNIT=10
     -DMRB_TIMESLICE_TICK_COUNT=1
     -DMRB_UTF8_STRING
-    -DMRB_INT64=1
-    -DMRB_NO_BOXING
+    # Must match build_config/*-esp-picoruby.rb: these fix sizeof(mrb_value)
+    # and the mrb_state layout shared with libmruby.
+    -DMRB_INT32=1
+    -DMRB_WORD_BOXING=1
     -DMRB_32BIT=1
     -DPICORB_ALLOC_ESTALLOC
     -DPICORB_ALLOC_ALIGN=8

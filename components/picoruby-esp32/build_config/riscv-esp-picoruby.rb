@@ -25,8 +25,10 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.cc.defines << 'MRB_TIMESLICE_TICK_COUNT=1'
   conf.cc.defines << 'MRBC_CONVERT_CRLF=1'
   conf.cc.defines << 'MRB_UTF8_STRING'
-  conf.cc.defines << 'MRB_INT64'
-  conf.cc.defines << 'MRB_NO_BOXING'
+  # 32-bit word boxing: mrb_value is 4 bytes. An Integer past 31 bits is a
+  # heap RInteger, and one past mrb_int is a Bignum from mruby-bigint.
+  conf.cc.defines << 'MRB_INT32'
+  conf.cc.defines << 'MRB_WORD_BOXING'
   conf.cc.defines << 'MRB_32BIT'
   conf.cc.defines << 'PICORB_ALLOC_ESTALLOC'
   conf.cc.defines << 'PICORB_ALLOC_ALIGN=8'
@@ -42,6 +44,7 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   end
 
   conf.picoruby
+  conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-bigint'
   conf.gembox 'minimum'
   conf.gembox 'core'
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-kernel-ext'
