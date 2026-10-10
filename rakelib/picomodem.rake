@@ -13,9 +13,8 @@ end
 def run_picomodem(*args)
   picoruby = find_host_picoruby or
     abort "Host picoruby not found. Run `rake setup_<target>` first (or set PICORUBY)."
-  port_args = ENV["PORT"] ? ["-d", ENV["PORT"]] : []
   # The client prints the reason itself; exit quietly instead of letting `sh` add a rake backtrace.
-  exit 1 unless system(picoruby, PICOMODEM_TOOL, *port_args, *args)
+  exit 1 unless system(picoruby, PICOMODEM_TOOL, *port_args("-d"), *args)
 end
 
 namespace :picomodem do

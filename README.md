@@ -287,6 +287,16 @@ Flash the built image to your device:
 $ rake flash
 ```
 
+The storage image (`build/storage.bin`, from `storage/`) is built with the system executables
+(`/bin/*`, `/etc/init.d/r2p2`) already in place, so the first boot after flashing doesn't have to
+write them. If the bootloader, partition table and storage image are unchanged since the last
+`rake flash` to the same `PORT`, only the app is flashed, which is faster and keeps the files on
+the device. Set `FULL_FLASH=1` to flash everything (and reset the files to `storage/`):
+
+```sh
+$ FULL_FLASH=1 rake flash
+```
+
 Open a serial terminal to connect to your device:
 
 ```sh

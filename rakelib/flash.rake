@@ -2,6 +2,7 @@ require "json"
 require "rbconfig"
 require "open-uri"
 require "tmpdir"
+require "digest"
 
 # Bumping this also bumps the binary `rake setup_espflash` downloads.
 ESPFLASH_VERSION = "4.6.0"
@@ -12,6 +13,12 @@ ESPFLASH_BIN = File.join(ESPFLASH_DIR, Gem.win_platform? ? "espflash.exe" : "esp
 # target/VM the build was last configured for.
 def build_project_description
   JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "project_description.json")))
+end
+
+# Arguments selecting the serial port given by ENV['PORT'] (none when unset, so that the tool
+# auto-detects it).
+def port_args(option = "--port")
+  ENV["PORT"] ? [option, ENV["PORT"]] : []
 end
 
 def on_path(name)
@@ -113,22 +120,55 @@ task :setup_espflash do
   end
 end
 
+# What `rake flash` last wrote besides the app: the serial port and the digests of the other images
+# (bootloader, partition table, storage), keyed by offset.
+FLASHED_IMAGES_FILE = File.join(R2P2_ESP32_ROOT, "build", "flashed_images.json")
+
+def flasher_args
+  JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "flasher_args.json")))
+end
+
+def non_app_image_digests
+  args = flasher_args
+  args["flash_files"].reject { |addr, _file| addr == args["app"]["offset"] }.to_h do |addr, file|
+    [addr, Digest::SHA256.file(File.join(R2P2_ESP32_ROOT, "build", file)).hexdigest]
+  end
+end
+
+def flashed_images
+  JSON.parse(File.read(FLASHED_IMAGES_FILE))
+rescue Errno::ENOENT, JSON::ParserError
+  nil
+end
+
 # ENV['PORT'] overrides the serial port; otherwise the flashing tool auto-detects it.
 # Prefers an esptool.py already on the host (e.g. from a pre-existing `pip install esptool`)
 # to avoid changing behavior for hosts already set up that way; otherwise uses espflash,
 # downloading it if neither is already available.
-desc "Flash the built firmware to ESP32, preferring an existing esptool.py, otherwise espflash"
+#
+# When the images other than the app are identical to what the last `rake flash` wrote to the same
+# PORT, only the app is flashed (flash_factory), which also keeps the files on the device.
+# FULL_FLASH=1 always flashes everything.
+desc "Flash the built firmware to ESP32 (only the app if nothing else changed; FULL_FLASH=1 to flash everything)"
 task :flash do
   chip = build_project_description["target"]
+  current = { "port" => ENV["PORT"], "images" => non_app_image_digests }
 
+  if ENV["FULL_FLASH"].to_s.empty? && flashed_images == current
+    puts "Bootloader, partition table and storage are unchanged since the last `rake flash`; " \
+         "flashing the app only (FULL_FLASH=1 to flash everything)"
+    Rake::Task[:flash_factory].invoke
+    next
+  end
+
+  # Forget the previous record first so that a failed flash never leads to an app-only flash
+  rm_f FLASHED_IMAGES_FILE
   FileUtils.cd(File.join(R2P2_ESP32_ROOT, "build")) do
     if find_esptool
-      port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
-      sh "esptool.py --chip #{chip} #{port} " \
-         "-b 460800 --before default_reset --after hard_reset write_flash @flash_args"
+      sh "esptool.py", "--chip", chip, *port_args,
+         "-b", "460800", "--before", "default_reset", "--after", "hard_reset", "write_flash", "@flash_args"
     else
       espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-      port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
       flash_files = JSON.parse(File.read("flasher_args.json"))["flash_files"]
       flash_files.sort_by { |addr, _file| Integer(addr, 16) }.each do |addr, file|
         sh espflash, "write-bin", addr, file,
@@ -136,42 +176,49 @@ task :flash do
       end
     end
   end
+  File.write(FLASHED_IMAGES_FILE, JSON.pretty_generate(current))
 end
 
-desc "Erase factory partition and flash firmware binary"
+# The partition is not erased beforehand: writing erases the sectors the image covers, and the
+# bootloader ignores whatever is left after the image.
+desc "Flash firmware binary to the factory partition"
 task :flash_factory do
+  chip = build_project_description["target"]
   if find_esptool
-    sh "esptool.py -b 460800 erase_region 0x10000 0x200000"
-    sh "esptool.py -b 460800 write_flash 0x10000 build/R2P2-ESP32.bin"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "write_flash", "0x10000", "build/R2P2-ESP32.bin"
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-    sh espflash, "erase-region", "0x10000", "0x200000", "--non-interactive"
-    sh espflash, "write-bin", "0x10000", "build/R2P2-ESP32.bin", "--non-interactive"
+    sh espflash, "write-bin", "0x10000", "build/R2P2-ESP32.bin", "--chip", chip, "--non-interactive", *port_args
   end
 end
 
 desc "Erase storage partition and flash storage binary"
 task :flash_storage do
+  chip = build_project_description["target"]
   if find_esptool
-    sh "esptool.py -b 460800 erase_region 0x210000 0x100000"
-    sh "esptool.py -b 460800 write_flash 0x210000 build/storage.bin"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "erase_region", "0x210000", "0x100000"
+    sh "esptool.py", "--chip", chip, *port_args, "-b", "460800", "write_flash", "0x210000", "build/storage.bin"
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esptool.py is on PATH."
-    sh espflash, "erase-region", "0x210000", "0x100000", "--non-interactive"
-    sh espflash, "write-bin", "0x210000", "build/storage.bin", "--non-interactive"
+    sh espflash, "erase-region", "0x210000", "0x100000", "--chip", chip, "--non-interactive", *port_args
+    sh espflash, "write-bin", "0x210000", "build/storage.bin", "--chip", chip, "--non-interactive", *port_args
+  end
+  # Keep the record of `rake flash` in sync with what is now on the device
+  if (record = flashed_images)
+    record["images"]["0x210000"] = Digest::SHA256.file(File.join(R2P2_ESP32_ROOT, "build", "storage.bin")).hexdigest
+    File.write(FLASHED_IMAGES_FILE, JSON.pretty_generate(record))
   end
 end
 
 desc "Monitor ESP32 serial output, preferring an existing esp-idf-monitor, otherwise espflash"
 task :monitor do
   desc_json = build_project_description
-  port = ENV["PORT"] ? "--port #{ENV['PORT']}" : ""
 
   if (monitor_cmd = find_idf_monitor)
-    sh "#{monitor_cmd} #{port} -b #{desc_json['monitor_baud']} build/#{desc_json['app_elf']}"
+    sh(*monitor_cmd.split, *port_args, "-b", desc_json["monitor_baud"].to_s,
+       File.join("build", desc_json["app_elf"]))
   else
     espflash = find_espflash or abort "espflash could not be found or downloaded, and no esp-idf-monitor is on PATH."
-    port_args = ENV["PORT"] ? ["--port", ENV["PORT"]] : []
     sh espflash, "monitor",
        "--chip", desc_json["target"],
        "--monitor-baud", desc_json["monitor_baud"].to_s,

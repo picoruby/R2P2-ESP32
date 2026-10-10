@@ -41,6 +41,7 @@ def qemu_serve(vm = nil)
   Rake::Task[:setup_qemu].invoke unless File.exist?(File.join(QEMU_BUILD_DIR, "sdkconfig"))
   Rake::Task[:qemu_efuse].invoke
   sh "idf.py -B #{QEMU_BUILD_DIR} #{"-D PICORB_VM=#{vm}" if vm} build"
+  preinstall_system_files(QEMU_BUILD_DIR)
 
   flash_size = File.read(File.join(QEMU_BUILD_DIR, "sdkconfig"))[/^CONFIG_ESPTOOLPY_FLASHSIZE="(\w+)"/, 1]
   FileUtils.cd(QEMU_BUILD_DIR) do
