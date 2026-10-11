@@ -67,6 +67,9 @@ namespace :docker do
   end
 
   # Mirror each host-side rake task 1:1 inside the container; "a:b" entries become a nested namespace.
+  # The qemu tasks (not qemu_serve) get a TTY (-it): QEMU's stdio is the console, and without it
+  # the terminal's reply to the DSR query in IO.wait_terminal never arrives, so the shell falls
+  # back to TERM=dumb (no logo, no key input).
   %w[setup build clean deep_clean qemu setup_qemu
      setup_esp32 setup_esp32c3 setup_esp32c6 setup_esp32h2 setup_esp32p4 setup_esp32s3
      picoruby:build femtoruby:build picoruby:qemu femtoruby:qemu
@@ -76,12 +79,12 @@ namespace :docker do
       ns, name = t.split(":", 2)
       namespace ns.to_sym do
         task name.to_sym => "docker:submodules" do
-          docker_run "rake #{t}", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
+          docker_run "rake #{t}", tty: t.split(":").last == "qemu", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
         end
       end
     else
       task t.to_sym => :submodules do
-        docker_run "rake #{t}", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
+        docker_run "rake #{t}", tty: t.split(":").last == "qemu", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
       end
     end
   end
