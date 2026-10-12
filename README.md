@@ -276,10 +276,12 @@ the Ruby that runs `rake` -- no ESP-IDF, Python (esptool / esp-idf-monitor), Rus
 -- so they work from a `build/` produced by [Docker](#building-with-docker) too. They run on Linux
 and macOS; Windows support is untested.
 
-`rake flash` talks to the serial bootloader in the chip's ROM (the protocol esptool uses, without
-its flasher stub): the board is reset into the download mode through DTR/RTS, the images are
-written compressed at 460800 baud (`FLASH_BAUD` changes it) and each is verified with an MD5 the
-chip computes. If the board can't be reset automatically, hold BOOT while pressing RESET.
+`rake flash` speaks the protocol of esptool: the board is reset into the download mode through
+DTR/RTS, the flasher stub of [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub)
+(`lib/esp_flash/stub/`, MIT or Apache-2.0, the one esptool 5 uses) is loaded into the chip's RAM,
+the images are written compressed at 460800 baud (`FLASH_BAUD` changes it) and each is verified
+with an MD5 the chip computes. `NO_STUB=1` writes through the ROM loader instead, which is slower.
+If the board can't be reset automatically, hold BOOT while pressing RESET.
 
 Flash the built image to your device:
 
@@ -305,6 +307,7 @@ $ rake monitor
 
 It resets the device first (`NO_RESET=1` attaches to it as it is) and passes every key through,
 Ctrl-C and the terminal's own replies included, so the shell's line editing and colors work.
+ESP-IDF log lines are colored by their level, as esp-idf-monitor does.
 Quit with `Ctrl-]`; `Ctrl-T Ctrl-R` resets the device. When the toolchain's `addr2line` is on
 `PATH`, a panic's backtrace is decoded with `build/R2P2-ESP32.elf`. `PORT=socket://127.0.0.1:5555`
 connects to [`rake qemu_serve`](#running-on-qemu-esp32-s3) instead.

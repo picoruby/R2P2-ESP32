@@ -30,11 +30,12 @@ def flash_port
 end
 
 # Connects to the chip on +port+ in its ROM loader, yields the loader and resets the chip into the app.
-# The tasks end with the message of an EspFlash::Error instead of a backtrace.
+# The tasks end with the message of an EspFlash::Error instead of a backtrace. NO_STUB=1 writes through the
+# ROM loader instead of the flasher stub.
 def with_loader(port)
   flash_size = EspFlash.parse_size(flasher_args.dig("flash_settings", "flash_size"))
   loader = EspFlash::Loader.open(port, chip: build_project_description["target"], baud: FLASH_BAUD,
-                                       flash_size: flash_size)
+                                       flash_size: flash_size, stub: ENV["NO_STUB"].to_s.empty?)
   yield loader
   loader.hard_reset
 ensure

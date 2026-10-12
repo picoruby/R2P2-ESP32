@@ -3,19 +3,26 @@
 # ruby -Ilib test/esp_flash_test.rb
 require "minitest/autorun"
 require "digest/md5"
+require "json"
 require "socket"
 require "stringio"
 require "zlib"
 require "esp_flash"
 
-# A port with a chip's ROM loader behind it, enough of it for EspFlash::Loader.
+# A port with a chip's ROM loader behind it, enough of it for EspFlash::Loader, and the flasher stub once
+# that is loaded into RAM.
 class FakeRomPort
-  attr_reader :flash, :baud, :ops
+  attr_reader :flash, :baud, :ops, :ram, :registers, :block_sizes
   attr_accessor :corrupt_md5
 
-  def initialize(chip_id: nil, magic: 0)
+  def initialize(chip_id: nil, magic: 0, usb_jtag: false)
     @chip_id = chip_id # nil: GET_SECURITY_INFO is unknown, as on the ESP32
     @magic = magic
+    @usb_jtag = usb_jtag
+    @ram = {}
+    @registers = {}
+    @block_sizes = []
+    @stub = false
     @flash = "\xff".b * (4 << 20)
     @rx = "".b
     @tx = "".b
@@ -25,7 +32,8 @@ class FakeRomPort
   def path = "fake"
   def encrypted_word? = @encrypted_word
   def resettable? = true
-  def usb_jtag_serial? = false
+  def usb_jtag_serial? = @usb_jtag
+  def stub? = @stub
   def set_lines(dtr: nil, rts: nil); end
   def discard_input = @rx.clear
   def close; end
@@ -55,14 +63,34 @@ class FakeRomPort
     @ops << op
     case op
     when 0x08 then 3.times { reply(op) } # SYNC: answered more than once
-    when 0x0a then reply(op, value: @magic)
+    when 0x0a then reply(op, value: @registers.fetch(data.unpack1("V"), @magic))
+    when 0x09
+      address, value = data.unpack("VV")
+      @registers[address] = value
+      reply(op)
+    when 0x05
+      _size, _blocks, _block_size, @mem_address = data.unpack("V4")
+      @ram[@mem_address] = "".b
+      reply(op)
+    when 0x07
+      len, = data.unpack("V")
+      chunk = data.byteslice(16, len)
+      return reply(op, error: 0x07) unless checksum == chunk.each_byte.reduce(0xef) { |s, b| s ^ b }
+
+      @ram[@mem_address] << chunk
+      reply(op)
+    when 0x06
+      reply(op)
+      @stub = true
+      @rx << "\xc0OHAI\xc0".b
     when 0x14
       return reply(op, error: 0x05) unless @chip_id
 
       reply(op, [0, 0, 0, 0, 0, 0, 0, 0, 0, @chip_id, 0].pack("VC8VV"))
     when 0x0b, 0x0d, 0x0f then reply(op)
     when 0x10
-      @write_size, @blocks, _block_size, @offset = data.unpack("V4")
+      @write_size, @blocks, block_size, @offset = data.unpack("V4")
+      @block_sizes << block_size
       @encrypted_word = data.bytesize == 20
       @seq = 0
       @inflater = Zlib::Inflate.new
@@ -83,7 +111,11 @@ class FakeRomPort
       addr, len = data.unpack("VV")
       md5 = Digest::MD5.hexdigest(@flash.byteslice(addr, len))
       md5 = md5.reverse if corrupt_md5
-      reply(op, md5)
+      reply(op, @stub ? [md5].pack("H*") : md5) # the stub answers with the bytes, the ROM in hex
+    when 0x12
+      return reply(op, error: 0x05) unless @stub
+
+      reply(op)
     else
       reply(op, error: 0x05)
     end
@@ -91,6 +123,7 @@ class FakeRomPort
 
   def reply(op, body = "".b, value: 0, error: nil)
     status = error ? [1, error, 0, 0].pack("C4") : "\0\0\0\0".b
+    status = status.byteslice(0, 2) if @stub # the stub sends 2 status bytes
     packet = [0x01, op, body.bytesize + 4, value].pack("CCvV") + body + status
     @rx << "\xc0".b + packet.gsub("\xdb".b, "\xdb\xdd".b).gsub("\xc0".b, "\xdb\xdc".b) + "\xc0".b
   end
@@ -130,6 +163,28 @@ class LoaderTest < Minitest::Test
     port = FakeRomPort.new(chip_id: 5)
     error = assert_raises(EspFlash::Error) { loader(port, "esp32s3") }
     assert_match(/for esp32s3.*esp32c3/, error.message)
+  end
+
+  def test_writes_through_the_stub
+    port = FakeRomPort.new(chip_id: 9, usb_jtag: true)
+    l = EspFlash::Loader.new(port, log: StringIO.new)
+    l.connect
+    l.check_chip("esp32s3")
+    l.disable_watchdogs
+    l.run_stub
+    l.attach_flash(4 << 20)
+    l.change_baud(460_800)
+    data = Random.new(2).bytes(100_000)
+    l.write_flash(0x10000, data)
+
+    assert port.stub?
+    stub = JSON.parse(File.read(File.join(EspFlash::Loader::STUB_DIR, "esp32s3.json")))
+    assert_equal stub["text"].unpack1("m"), port.ram[stub["text_start"]]
+    assert_equal stub["data"].unpack1("m"), port.ram[stub["data_start"]]
+    assert_equal 0, port.registers[0x60008098] # the RTC WDT is off
+    assert_equal [0x4000], port.block_sizes
+    assert_equal data, port.flash.byteslice(0x10000, data.bytesize)
+    assert_equal 0x12, port.ops.last(2).first # FLASH_DEFL_END before the MD5
   end
 
   def test_md5_mismatch_fails
@@ -203,5 +258,18 @@ class MonitorTest < Minitest::Test
     assert_includes output.string, "\e[5n" # what the device sent reaches the terminal
   ensure
     server&.close
+  end
+
+  # On a terminal, "\n" returns to the start of the line, and ESP-IDF log lines are colored.
+  def test_renders_for_a_terminal
+    monitor = EspFlash::Monitor.new("x", baud: 115_200, output: StringIO.new, terminal: true)
+    render = ->(data) { monitor.send(:render, data.b) }
+
+    assert_equal "\e[0;32mI (12) boot: hi\e[0m\r\nplain\r\n", render.("I (12) boot: hi\r\nplain\nW (3")
+    assert_equal "\e[0;33mW (34) x: y\e[0m\r\n$> ", render.("4) x: y\n$> ")
+    assert_equal "abc\r\n", render.("abc\nE") # "E" may start a log line
+    assert_equal "Error\r\n", render.("rror\n")
+    assert_equal "\e[1;31mE (5) t: a", render.("E (5) t: a")
+    assert_equal " b\e[0m\r\n", render.(" b\r\n")
   end
 end

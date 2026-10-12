@@ -11,17 +11,29 @@ module EspFlash
   #   Ctrl-T Ctrl-R   reset the device (Ctrl-T Ctrl-H lists the menu)
   #
   # When the ELF and the toolchain's addr2line are available, addresses in a panic's backtrace are decoded.
+  #
+  # On a terminal, a line feed from the device also returns the cursor to the start of the line (the
+  # terminal is in raw mode, which would leave that to the device), and ESP-IDF log lines are colored by
+  # their level ("I (123) tag: ..." green, W yellow, E red) as esp-idf-monitor does.
   class Monitor
     EXIT_KEY = 0x1d # Ctrl-]
     MENU_KEY = 0x14 # Ctrl-T
+    LOG_COLORS = { "I" => "\e[0;32m", "W" => "\e[0;33m", "E" => "\e[1;31m" }.freeze
+    COLOR_RESET = "\e[0m"
+    LOG_HEADER = /\A([IWE]) \([\d:. -]+\)/n
+    LOG_HEADER_PREFIX = /\A(?:[IWE](?: (?:\([\d:. -]*)?)?)?\z/n # what may still become a LOG_HEADER
     XTENSA_TARGETS = %w[esp32 esp32s2 esp32s3].freeze
 
-    def initialize(path, baud:, target: nil, elf: nil, reset: true, input: $stdin, output: $stdout)
+    def initialize(path, baud:, target: nil, elf: nil, reset: true, input: $stdin, output: $stdout, terminal: nil)
       @path = path
       @baud = baud
       @reset = reset
       @input = input
       @output = output
+      @terminal = terminal.nil? ? output.respond_to?(:tty?) && output.tty? : terminal
+      @line_start = true # the next byte from the device starts a line
+      @held = "".b # the start of a line that may be a log header, until the rest of it arrives
+      @colored = false # a log line's color is on
       @elf = elf if elf && File.exist?(elf)
       @addr2line = find_addr2line(target) if @elf
       @menu = false
@@ -81,10 +93,10 @@ module EspFlash
     def read_loop
       loop do
         data = @port.read(4096, 0.2)
-        next if data.empty?
+        next flush_held if data.empty?
 
         @out_mutex.synchronize do
-          @output.write(data)
+          @output.write(@terminal ? render(data) : data)
           @output.flush
         end
         decode_backtrace(data) if @addr2line
@@ -107,6 +119,53 @@ module EspFlash
         end
       end
       status "--- Reconnected to #{@path} ---"
+    end
+
+    # For a terminal: "\n" => "\r\n" (unless after "\r"), and log lines colored by their level.
+    def render(data)
+      data = @held + data
+      @held = "".b
+      out = "".b
+      pos = 0
+      while pos < data.bytesize
+        if @line_start
+          rest = data.byteslice(pos..)
+          if (header = LOG_HEADER.match(rest))
+            out << LOG_COLORS[header[1]]
+            @colored = true
+          elsif LOG_HEADER_PREFIX.match?(rest)
+            @held = rest
+            break
+          end
+          @line_start = false
+        end
+        newline = data.index("\n", pos)
+        unless newline
+          out << data.byteslice(pos..)
+          break
+        end
+        line = data.byteslice(pos, newline - pos)
+        line = line.chomp("\r")
+        out << line
+        out << COLOR_RESET if @colored
+        out << "\r\n"
+        @colored = false
+        @line_start = true
+        pos = newline + 1
+      end
+      out
+    end
+
+    # Writes out what render held back, when no more of the line came.
+    def flush_held
+      return if @held.empty?
+
+      @out_mutex.synchronize do
+        @output.write(@held)
+        @output.flush
+      end
+      @held = "".b
+      @line_start = false
     end
 
     def send_to_device(bytes)
