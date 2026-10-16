@@ -271,15 +271,17 @@ DAP remote debugging over WiFi.
 
 ### Flash and Monitor
 
-`rake flash`/`rake monitor` call `esptool`/`esp-idf-monitor` (if already on `PATH`, e.g. via
-`pip install esptool esp-idf-monitor`) or [`espflash`](https://github.com/esp-rs/espflash)
-directly rather than `idf.py`, so they work from a `build/` produced by
-[Docker](#building-with-docker) too, without a full ESP-IDF install on the host.
+`rake flash`/`rake monitor` are implemented in plain Ruby (`lib/esp_flash/`): they need nothing but
+the Ruby that runs `rake` -- no ESP-IDF, Python (esptool / esp-idf-monitor), Rust (espflash) or gem
+-- so they work from a `build/` produced by [Docker](#building-with-docker) too. They run on Linux
+and macOS; Windows support is untested.
 
-If esptool/esp-idf-monitor aren't already installed, these tasks use `espflash` instead -- a
-single binary with no Python or Rust/cargo dependency. The first `rake flash`/`monitor` run (or
-an explicit `rake setup_espflash`) looks for an `espflash` already on `PATH`, or downloads the
-matching prebuilt binary for your OS/CPU from its GitHub releases into `.tools/`.
+`rake flash` speaks the protocol of esptool: the board is reset into the download mode through
+DTR/RTS, the flasher stub of [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub)
+(`lib/esp_flash/stub/`, MIT or Apache-2.0, the one esptool 5 uses) is loaded into the chip's RAM,
+the images are written compressed at 460800 baud (`FLASH_BAUD` changes it) and each is verified
+with an MD5 the chip computes. `NO_STUB=1` writes through the ROM loader instead, which is slower.
+If the board can't be reset automatically, hold BOOT while pressing RESET.
 
 Flash the built image to your device:
 
@@ -303,7 +305,15 @@ Open a serial terminal to connect to your device:
 $ rake monitor
 ```
 
-If the serial port isn't auto-detected correctly (e.g. multiple devices connected), set `PORT`:
+It resets the device first (`NO_RESET=1` attaches to it as it is) and passes every key through,
+Ctrl-C and the terminal's own replies included, so the shell's line editing and colors work.
+ESP-IDF log lines are colored by their level, as esp-idf-monitor does.
+Quit with `Ctrl-]`; `Ctrl-T Ctrl-R` resets the device. When the toolchain's `addr2line` is on
+`PATH`, a panic's backtrace is decoded with `build/R2P2-ESP32.elf`. `PORT=socket://127.0.0.1:5555`
+connects to [`rake qemu_serve`](#running-on-qemu-esp32-s3) instead.
+
+The serial port is detected automatically (`/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/cu.usbserial*`,
+`/dev/cu.usbmodem*`, ...; with several, you are asked which one). To pick it yourself, set `PORT`:
 
 ```sh
 $ PORT=/dev/tty.usbserial-0001 rake flash

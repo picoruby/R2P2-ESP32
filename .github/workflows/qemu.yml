@@ -39,3 +39,12 @@ jobs:
           target: esp32s3
           path: '.'
           command: bash scripts/qemu_boot_check.sh ${{ matrix.vm_flag }}
+      # `rake flash`'s ROM loader client (lib/esp_flash) against the ESP32-S3 ROM, with the build above.
+      - name: Flash through the ROM loader and boot on QEMU (${{ matrix.vm_name }})
+        if: matrix.vm_flag == 'mrubyc'
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32s3
+          path: '.'
+          command: bash scripts/qemu_flash_check.sh
