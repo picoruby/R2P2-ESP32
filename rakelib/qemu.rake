@@ -1,3 +1,6 @@
+require "json"
+require_relative "../lib/esp_flash"
+
 QEMU_BUILD_DIR = "build-qemu"
 QEMU_EXTRA_ARGS = "-m 8M"
 
@@ -44,9 +47,10 @@ def qemu_serve(vm = nil)
   preinstall_system_files(QEMU_BUILD_DIR)
 
   flash_size = File.read(File.join(QEMU_BUILD_DIR, "sdkconfig"))[/^CONFIG_ESPTOOLPY_FLASHSIZE="(\w+)"/, 1]
-  FileUtils.cd(QEMU_BUILD_DIR) do
-    sh "python3 -m esptool --chip=esp32s3 merge_bin --output=qemu_flash.bin --fill-flash-size=#{flash_size} @flash_args"
-  end
+  flash_files = JSON.parse(File.read(File.join(QEMU_BUILD_DIR, "flasher_args.json")))["flash_files"]
+  images = flash_files.to_h { |addr, file| [Integer(addr, 16), File.binread(File.join(QEMU_BUILD_DIR, file))] }
+  File.binwrite(File.join(QEMU_BUILD_DIR, "qemu_flash.bin"),
+                EspFlash.merge_images(images, size: EspFlash.parse_size(flash_size)))
 
   host = ENV.fetch("QEMU_SERIAL_HOST", "127.0.0.1")
   port = ENV.fetch("QEMU_SERIAL_PORT", "5555")
