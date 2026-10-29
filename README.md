@@ -111,6 +111,12 @@ $ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console"
 $ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console;sdkconfigs/spiram"
 ```
 
+`sdkconfigs/spiram` is for Octal SPIRAM. Use `sdkconfigs/spiram_quad` instead for Quad SPIRAM such as M5Stack CoreS3 and M5Stack CoreS3 SE:
+
+```sh
+$ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console;sdkconfigs/spiram_quad"
+```
+
 Set the environment variable before running `rake setup_*` and `rake build`.
 If you change `SDKCONFIG_DEFAULTS`, delete the `sdkconfig` file and rebuild from scratch.
 
@@ -389,7 +395,8 @@ The following devices have been confirmed to work:
 | M5Stamp C3 Mate | ESP32-C3 | FemtoRuby (mruby/c) | No | No |
 | ESPr® Developer S3 Type-C | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | No | Yes |
 | ATOMS3 Lite | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | No |
-| M5Stack CoreS3 | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | Yes |
+| M5Stack CoreS3 | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | Yes (Quad) |
+| M5Stack CoreS3 SE | ESP32-S3 | PicoRuby (mruby) | Yes | Yes (Quad) |
 
 ## License
 
