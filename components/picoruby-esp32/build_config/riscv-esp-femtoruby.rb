@@ -20,6 +20,8 @@ MRuby::CrossBuild.new("esp32-femtoruby") do |conf|
   conf.cc.defines << "PICORB_PLATFORM_ESP32"
   conf.cc.defines << "PICORB_INT64"
   conf.cc.defines << "NDEBUG"
+  conf.cc.defines << "PM_ARENA_INITIAL_SIZE=2048"
+  conf.cc.defines << "PM_CONSTANT_POOL_MIN_CAPACITY=128"
   conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
 
   conf.femtoruby(alloc_libc: false)
