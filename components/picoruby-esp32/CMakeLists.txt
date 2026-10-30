@@ -43,7 +43,6 @@ else()
     -DMRC_CUSTOM_ALLOC
     -DPICORB_VM_MRUBYC
   )
-  set(ADDITIONAL_SRCS "")
 endif()
 
 if(CONFIG_ESP_WIFI_ENABLED AND DEFINED ENV{USE_WIFI})
@@ -59,40 +58,55 @@ if(DEFINED ENV{PICORB_TASK_STACK_SIZE})
   list(APPEND ADDITIONAL_DEFINITIONS -DPICORB_TASK_STACK_SIZE=$ENV{PICORB_TASK_STACK_SIZE})
 endif()
 
+set(PICORUBY_DIR ${COMPONENT_DIR}/picoruby)
+set(LIBMRUBY_FILE ${PICORUBY_DIR}/build/${LIBMRUBY_PATH}/lib/libmruby.a)
+
+# Expose sdkconfig values to build config via env vars
+set(MRUBY_ENV
+  MRUBY_CONFIG=${MRUBY_CONFIG_STRING}
+  CONFIG_IDF_TARGET=${CONFIG_IDF_TARGET}
+)
+if(MRUBY_USE_WIFI)
+  list(APPEND MRUBY_ENV USE_WIFI=${MRUBY_USE_WIFI})
+endif()
+
+# Pick up the port sources of the gems the build config enables.
+# The gem list (dependencies included) comes from the build config itself,
+# so a gem added to or removed from build_config/*.rb needs no change here.
+# Skipped in the early expansion pass, which only collects REQUIRES.
+set(PORT_SRCS "")
+if(NOT CMAKE_BUILD_EARLY_EXPANSION)
+  set(GEM_DIRS_FILE ${CMAKE_BINARY_DIR}/picoruby_gem_dirs.txt)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env ${MRUBY_ENV}
+      GEM_DIRS_TARGET=${LIBMRUBY_PATH} GEM_DIRS_OUT=${GEM_DIRS_FILE}
+      rake --rakelibdir ${COMPONENT_DIR}/rakelib gem_dirs
+    WORKING_DIRECTORY ${PICORUBY_DIR}
+    RESULT_VARIABLE GEM_DIRS_RESULT
+    OUTPUT_VARIABLE GEM_DIRS_LOG
+    ERROR_VARIABLE GEM_DIRS_LOG
+  )
+  if(NOT GEM_DIRS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to list the mrbgems of ${MRUBY_CONFIG_STRING}:\n${GEM_DIRS_LOG}")
+  endif()
+  file(STRINGS ${GEM_DIRS_FILE} GEM_DIRS)
+  foreach(gem_dir ${GEM_DIRS})
+    file(GLOB gem_port_srcs CONFIGURE_DEPENDS
+      ${gem_dir}/ports/esp32/*.c
+      ${gem_dir}/ports/common/*.c
+    )
+    list(APPEND PORT_SRCS ${gem_port_srcs})
+  endforeach()
+  # Reconfigure when the gem list may have changed.
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${MRUBY_CONFIG_STRING})
+endif()
+
 idf_component_register(
   SRCS
     ${COMPONENT_DIR}/picoruby-esp32.c
-    ${ADDITIONAL_SRCS}
+    # Not under ports/esp32/, so PORT_SRCS does not pick it up
     ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-esp32/ports/esp32.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-machine/ports/esp32/machine.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-machine/ports/common/machine.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-io-console/ports/esp32/io-console.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-littlefs/ports/esp32/flash_hal.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-env/ports/esp32/env.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-gpio/ports/esp32/gpio.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-irq/ports/esp32/irq.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-adc/ports/esp32/adc.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-spi/ports/esp32/spi.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-rng/ports/esp32/rng.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-pwm/ports/esp32/pwm.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-rmt/ports/esp32/rmt.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-pulse_counter/ports/esp32/pulse_counter.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-watchdog/ports/esp32/watchdog.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/esp32/timing_alt.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/cipher.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/cmac.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/digest.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/hmac.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/pkey.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-mbedtls/ports/common/md.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-socket/ports/esp32/net_helpers.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-socket/ports/esp32/ssl_socket.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-socket/ports/esp32/tcp_server.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-socket/ports/esp32/tcp_socket.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-socket/ports/esp32/udp_socket.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-i2c/ports/esp32/i2c.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-uart/ports/esp32/uart.c
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-require/ports/esp32/platform.c
+    ${PORT_SRCS}
   INCLUDE_DIRS
     ${COMPONENT_DIR}
     ${COMPONENT_DIR}/picoruby/include
@@ -129,18 +143,6 @@ add_definitions(
   -DPICORB_PLATFORM_ESP32
   -DNDEBUG
 )
-
-set(PICORUBY_DIR ${COMPONENT_DIR}/picoruby)
-set(LIBMRUBY_FILE ${PICORUBY_DIR}/build/${LIBMRUBY_PATH}/lib/libmruby.a)
-
-# Expose sdkconfig values to build config via env vars
-set(MRUBY_ENV
-  MRUBY_CONFIG=${MRUBY_CONFIG_STRING}
-  CONFIG_IDF_TARGET=${CONFIG_IDF_TARGET}
-)
-if(MRUBY_USE_WIFI)
-  list(APPEND MRUBY_ENV USE_WIFI=${MRUBY_USE_WIFI})
-endif()
 
 # Rebuild libmruby.a when the build config or a custom mrbgem (mrbgems/ at the project root) changes.
 # Without DEPENDS this command only runs while libmruby.a does not exist yet.
