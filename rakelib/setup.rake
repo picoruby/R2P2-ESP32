@@ -17,21 +17,25 @@ def find_host_tool(*names)
   abort "Host toolchain `#{names.join('`/`')}` not found in PATH. Set HOST_#{names.first.upcase} to specify it."
 end
 
-desc "Install dependencies and build mruby"
-task :setup do
-  host_env = {
-    'CC' => find_host_tool('cc', 'gcc', 'clang'),
-    'AR' => find_host_tool('ar')
-  }
-  FileUtils.cd MRUBY_ROOT do
-    sh "bundle install"
-    sh host_env, "rake"
+# Runs on the host with ESP-IDF; the task of the same name without `native:` runs it in Docker
+# (rakelib/docker.rake).
+namespace :native do
+  desc "Install dependencies and build mruby"
+  task :setup do
+    host_env = {
+      'CC' => find_host_tool('cc', 'gcc', 'clang'),
+      'AR' => find_host_tool('ar')
+    }
+    FileUtils.cd MRUBY_ROOT do
+      sh "bundle install"
+      sh host_env, "rake"
+    end
   end
-end
 
-%w[esp32 esp32c3 esp32c6 esp32h2 esp32p4 esp32s3].each do |name|
-  desc "Setup environment for #{name} target"
-  task "setup_#{name}" => %w[deep_clean setup] do
-    sh "idf.py set-target #{name}"
+  %w[esp32 esp32c3 esp32c6 esp32h2 esp32p4 esp32s3].each do |name|
+    desc "Setup environment for #{name} target"
+    task "setup_#{name}" => %w[deep_clean setup] do
+      sh "idf.py set-target #{name}"
+    end
   end
 end

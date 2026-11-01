@@ -21,7 +21,7 @@ module R2p2Mcp
           local_path = File.expand_path(local_path || File.basename(remote_path))
           result = device_call do
             Device.transfer("get #{remote_path}") do |pty|
-              CommandRunner.run(RakeTask.command("picomodem:get[#{remote_path},#{local_path}]", native: true),
+              CommandRunner.run(RakeTask.command("picomodem:get[#{remote_path},#{local_path}]"),
                                 env: { 'PORT' => pty })
             end
           end
