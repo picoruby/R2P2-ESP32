@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Flash R2P2-ESP32 into a blank flash through the ESP32-S3 ROM serial loader with lib/esp_flash (what
+# Flash R2P2-ESP32 into a blank flash through the ESP32-S3 ROM serial loader with the esp_flash gem (what
 # `rake flash` uses), on QEMU started in the download mode with its UART on TCP; then boot that flash
 # and verify it reaches the picoruby-shell prompt.
 #
@@ -13,9 +13,11 @@ BOOT_TIMEOUT="${QEMU_BOOT_TIMEOUT:-300}"
 WORK="$(mktemp -d)"
 FLASH="$WORK/flash.bin"
 
+gem list -i esp_flash -v '~> 0.1' >/dev/null || gem install esp_flash -v '~> 0.1' || exit 1
+
 QEMU_COMMON=(-M esp32s3 -nographic -monitor none -drive "file=$FLASH,if=mtd,format=raw")
 
-ruby -Ilib -resp_flash -rjson -e '
+ruby -resp_flash -rjson -e '
   size = JSON.parse(File.read(File.join(ARGV[0], "flasher_args.json"))).dig("flash_settings", "flash_size")
   File.binwrite(ARGV[1], "\xff".b * EspFlash.parse_size(size))' "$BUILD_DIR" "$FLASH" || exit 1
 
@@ -25,8 +27,8 @@ qemu-system-xtensa "${QEMU_COMMON[@]}" -global driver=esp32s3.gpio,property=stra
 QEMU_PID=$!
 sleep 3
 
-echo "== Flashing ${BUILD_DIR} with lib/esp_flash =="
-ruby -Ilib -resp_flash -rjson -e '
+echo "== Flashing ${BUILD_DIR} with esp_flash =="
+ruby -resp_flash -rjson -e '
   args = JSON.parse(File.read(File.join(ARGV[0], "flasher_args.json")))
   loader = EspFlash::Loader.open(ARGV[1], chip: "esp32s3",
                                           flash_size: EspFlash.parse_size(args.dig("flash_settings", "flash_size")))

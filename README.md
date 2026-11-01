@@ -277,14 +277,19 @@ DAP remote debugging over WiFi.
 
 ### Flash and Monitor
 
-`rake flash`/`rake monitor` are implemented in plain Ruby (`lib/esp_flash/`): they need nothing but
-the Ruby that runs `rake` -- no ESP-IDF, Python (esptool / esp-idf-monitor), Rust (espflash) or gem
--- so they work from a `build/` produced by [Docker](#building-with-docker) too. They run on Linux
-and macOS; Windows support is untested.
+`rake flash`/`rake monitor` are implemented in plain Ruby by the [esp_flash](https://rubygems.org/gems/esp_flash)
+gem: besides the Ruby (3.2 or later) that runs `rake`, they need nothing but that gem -- no ESP-IDF,
+Python (esptool / esp-idf-monitor) or Rust (espflash) -- so they work from a `build/` produced by
+[Docker](#building-with-docker) too. They run on Linux and macOS; Windows support is untested.
+Install the gem once:
+
+```sh
+$ gem install esp_flash
+```
 
 `rake flash` speaks the protocol of esptool: the board is reset into the download mode through
 DTR/RTS, the flasher stub of [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub)
-(`lib/esp_flash/stub/`, MIT or Apache-2.0, the one esptool 5 uses) is loaded into the chip's RAM,
+(bundled in the gem, MIT or Apache-2.0, the one esptool 5 uses) is loaded into the chip's RAM,
 the images are written compressed at 460800 baud (`FLASH_BAUD` changes it) and each is verified
 with an MD5 the chip computes. `NO_STUB=1` writes through the ROM loader instead, which is slower.
 If the board can't be reset automatically, hold BOOT while pressing RESET.

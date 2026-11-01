@@ -1,6 +1,5 @@
 require "json"
 require "digest"
-require_relative "../lib/esp_flash"
 
 FLASH_BAUD = Integer(ENV.fetch("FLASH_BAUD", "460800"))
 STORAGE_OFFSET = 0x210000
@@ -10,6 +9,17 @@ STORAGE_SIZE = 0x100000
 # target/VM the build was last configured for.
 def build_project_description
   JSON.parse(File.read(File.join(R2P2_ESP32_ROOT, "build", "project_description.json")))
+end
+
+ESP_FLASH_VERSION = "~> 0.1"
+
+# The esp_flash gem (https://rubygems.org/gems/esp_flash), loaded only by the tasks that talk to a chip
+# (as their prerequisite), so that every other task works without it.
+task :esp_flash do
+  gem "esp_flash", ESP_FLASH_VERSION
+  require "esp_flash"
+rescue LoadError
+  abort "Error: this task needs the esp_flash gem: gem install esp_flash -v '#{ESP_FLASH_VERSION}'"
 end
 
 # Arguments selecting the serial port given by ENV['PORT'] (none when unset, so that the tool
@@ -79,7 +89,7 @@ end
 # port, only the app is flashed, which also keeps the files on the device. FULL_FLASH=1 always
 # flashes everything.
 desc "Flash the built firmware to ESP32 (only the app if nothing else changed; FULL_FLASH=1 to flash everything)"
-task :flash do
+task flash: :esp_flash do
   port = flash_port
   current = { "port" => port, "images" => non_app_image_digests }
 
@@ -104,7 +114,7 @@ end
 
 # Writing erases the sectors the image covers, and the bootloader ignores whatever is left after the image.
 desc "Flash firmware binary to the factory partition"
-task :flash_factory do
+task flash_factory: :esp_flash do
   with_loader(flash_port) { |loader| flash_app(loader) }
 rescue EspFlash::Error => e
   abort "Error: #{e.message}"
@@ -112,7 +122,7 @@ end
 
 # The image is padded with 0xff to the whole partition, which erases the rest of it.
 desc "Erase storage partition and flash storage binary"
-task :flash_storage do
+task flash_storage: :esp_flash do
   storage = build_file("storage.bin")
   abort "Error: storage.bin is larger than the storage partition" if storage.bytesize > STORAGE_SIZE
 
@@ -131,7 +141,7 @@ end
 # Resets the device first (NO_RESET=1 to attach to it as it is). PORT=socket://HOST:PORT connects to
 # QEMU's UART instead (see `rake qemu_serve`).
 desc "Monitor ESP32 serial output (quit with Ctrl-], reset with Ctrl-T Ctrl-R)"
-task :monitor do
+task monitor: :esp_flash do
   desc_json = build_project_description
   EspFlash::Monitor.new(flash_port, baud: Integer(desc_json["monitor_baud"]), target: desc_json["target"],
                                     elf: File.join(R2P2_ESP32_ROOT, "build", desc_json["app_elf"]),

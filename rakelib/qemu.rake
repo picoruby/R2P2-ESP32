@@ -1,5 +1,4 @@
 require "json"
-require_relative "../lib/esp_flash"
 
 QEMU_BUILD_DIR = "build-qemu"
 QEMU_EXTRA_ARGS = "-m 8M"
@@ -70,11 +69,11 @@ def qemu_serve(vm = nil)
 end
 
 desc "Run QEMU (ESP32-S3) with the UART on a TCP port (QEMU_SERIAL_PORT, default 5555), keeping the configured VM"
-task(:qemu_serve) { qemu_serve }
+task(qemu_serve: :esp_flash) { qemu_serve }
 
 PICORB_VMS.each do |name, vm|
   namespace name do
     desc "Run QEMU (ESP32-S3) with the UART on a TCP port, with #{name} VM"
-    task(:qemu_serve) { qemu_serve(vm) }
+    task(qemu_serve: :esp_flash) { qemu_serve(vm) }
   end
 end
