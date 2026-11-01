@@ -104,8 +104,6 @@ endif()
 idf_component_register(
   SRCS
     ${COMPONENT_DIR}/picoruby-esp32.c
-    # Not under ports/esp32/, so PORT_SRCS does not pick it up
-    ${COMPONENT_DIR}/picoruby/mrbgems/picoruby-esp32/ports/esp32.c
     ${PORT_SRCS}
   INCLUDE_DIRS
     ${COMPONENT_DIR}
