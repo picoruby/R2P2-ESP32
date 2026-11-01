@@ -19,8 +19,11 @@ load MRUBY_CONFIG
 desc "Default task that runs all main tasks"
 task :default => :all
 
-desc "Build, flash, and monitor the ESP32 project"
+desc "Build (in Docker), flash, and monitor the ESP32 project"
 task :all => %w[build flash monitor]
+
+desc "Like `rake all`, but build on the host with ESP-IDF (native:build)"
+task "native:all" => %w[native:build flash monitor]
 
 # All other tasks live under rakelib/ (auto-loaded by `rake`): setup.rake, build.rake, qemu.rake,
 # flash.rake, picomodem.rake, clean.rake, wifi_config.rake, docker.rake.

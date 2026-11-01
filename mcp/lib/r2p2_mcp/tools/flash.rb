@@ -29,7 +29,7 @@ module R2p2Mcp
 
           port ||= current
           Device.disconnect
-          run_job(label: 'flash', command: RakeTask.command('flash', native: true),
+          run_job(label: 'flash', command: RakeTask.command('flash'),
                   env: port ? { 'PORT' => port } : {}, timeout: timeout,
                   on_finish: (reconnector(port) if reconnect && port))
         end

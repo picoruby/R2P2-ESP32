@@ -65,30 +65,24 @@ namespace :docker do
   task :shell => :submodules do
     docker_run "bash", tty: true
   end
-
-  # Mirror each host-side rake task 1:1 inside the container; "a:b" entries become a nested namespace.
-  # The qemu tasks (not qemu_serve) get a TTY (-it): QEMU's stdio is the console, and without it
-  # the terminal's reply to the DSR query in IO.wait_terminal never arrives, so the shell falls
-  # back to TERM=dumb (no logo, no key input).
-  %w[setup build clean deep_clean qemu setup_qemu
-     setup_esp32 setup_esp32c3 setup_esp32c6 setup_esp32h2 setup_esp32p4 setup_esp32s3
-     picoruby:build femtoruby:build picoruby:qemu femtoruby:qemu
-     qemu_serve picoruby:qemu_serve femtoruby:qemu_serve].each do |t|
-    desc "Run `rake #{t}` inside the espressif/idf Docker container"
-    if t.include?(":")
-      ns, name = t.split(":", 2)
-      namespace ns.to_sym do
-        task name.to_sym => "docker:submodules" do
-          docker_run "rake #{t}", tty: t.split(":").last == "qemu", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
-        end
-      end
-    else
-      task t.to_sym => :submodules do
-        docker_run "rake #{t}", tty: t.split(":").last == "qemu", docker_args: (docker_qemu_serve_args if t.end_with?("qemu_serve")).to_s
-      end
-    end
-  end
 end
 
-desc "Like `rake all`, but build in Docker (see docker:build), then flash/monitor from the host"
-task :docker => %w[docker:build flash monitor]
+# The build tasks run in Docker by default: each task below runs `rake native:<task>` (the host-side
+# task, which needs ESP-IDF) inside the container; "a:b" entries become a nested namespace.
+# The qemu tasks (not qemu_serve) get a TTY (-it): QEMU's stdio is the console, and without it
+# the terminal's reply to the DSR query in IO.wait_terminal never arrives, so the shell falls
+# back to TERM=dumb (no logo, no key input).
+%w[setup build clean deep_clean qemu setup_qemu qemu_efuse
+   setup_esp32 setup_esp32c3 setup_esp32c6 setup_esp32h2 setup_esp32p4 setup_esp32s3
+   picoruby:build femtoruby:build picoruby:qemu femtoruby:qemu
+   qemu_serve picoruby:qemu_serve femtoruby:qemu_serve].each do |t|
+  ns, name = t.include?(":") ? t.split(":", 2) : [nil, t]
+  define = proc do
+    desc "Run `rake native:#{t}` inside the espressif/idf Docker container"
+    task name.to_sym => "docker:submodules" do
+      docker_args = name == "qemu_serve" ? docker_qemu_serve_args : ""
+      docker_run "rake native:#{t}", tty: name == "qemu", docker_args: docker_args
+    end
+  end
+  ns ? namespace(ns.to_sym, &define) : define.call
+end
