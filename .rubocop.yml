@@ -1,0 +1,44 @@
+AllCops:
+  TargetRubyVersion: 3.2 # rake tasks also run on the Ruby of the ESP-IDF Docker image
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - components/picoruby-esp32/picoruby/**/*
+    - managed_components/**/*
+    - build/**/*
+    - build-qemu*/**/*
+    - storage/**/*
+    - .bundle-docker/**/*
+    - .worktrees/**/*
+    - vendor/**/*
+
+Naming/MethodParameterName:
+  AllowedNames: [vm, io] # vm is a tool argument name
+
+Naming/FileName:
+  Exclude:
+    - components/picoruby-esp32/build_config/*.rb
+
+Metrics:
+  Exclude:
+    - Rakefile
+    - rakelib/*.rake
+    - components/picoruby-esp32/build_config/*.rb
+
+# mrblib runs on PicoRuby, and build_config is loaded by the build system of mruby
+Style/FrozenStringLiteralComment:
+  Exclude:
+    - components/picoruby-esp32/mrblib/**/*
+    - components/picoruby-esp32/build_config/*.rb
+
+Style/GlobalStdStream:
+  Exclude:
+    - components/picoruby-esp32/mrblib/**/*
+
+Style/GlobalVars:
+  Exclude:
+    - components/picoruby-esp32/mrblib/**/*
+
+Lint/RescueException:
+  Exclude:
+    - components/picoruby-esp32/mrblib/**/*

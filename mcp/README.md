@@ -16,8 +16,9 @@ transfer), and try things without hardware on QEMU, plus manage mrbgems.
 
 ## Install
 
+The gems are declared in the `Gemfile` at the repository root:
+
 ```sh
-cd mcp
 bundle install
 ```
 
@@ -134,6 +135,5 @@ Steps 1 to 3 return when the job is done (see `job_wait` for one that outlasts `
 ## Development
 
 ```sh
-cd mcp
-bundle exec rubocop   # style check; config in .rubocop.yml (defaults + NewCops)
+bundle exec rubocop mcp   # style check; config in ../.rubocop.yml (defaults + NewCops)
 ```
