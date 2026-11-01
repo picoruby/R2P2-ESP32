@@ -2,6 +2,9 @@
 
 source 'https://rubygems.org'
 
+gem 'esp_flash', '~> 0.1'
+gem 'rake'
+
 gem 'mcp'
 gem 'serialport'
 

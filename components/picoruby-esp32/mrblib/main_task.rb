@@ -1,19 +1,19 @@
 require 'machine'
-require "watchdog"
+require 'watchdog'
 Watchdog.disable
-require "shell"
+require 'shell'
 STDIN = IO.new
 STDOUT = IO.new
 
 # Setup flash disk
 begin
   STDIN.echo = false
-  puts "Initializing FLASH disk as the root volume... "
+  puts 'Initializing FLASH disk as the root volume... '
   Shell.setup_root_volume(:flash, label: 'storage')
   Shell.setup_system_files
-  puts "Available"
-rescue => e
-  puts "Not available"
+  puts 'Available'
+rescue StandardError => e
+  puts 'Not available'
   puts "#{e.message} (#{e.class})"
 rescue Exception => e
   puts "FATAL: #{e.message} (#{e.class})"
@@ -21,11 +21,9 @@ end
 
 begin
   if Machine.wifi_available?
-    ARGV[0] = "--check-auto-connect"
+    ARGV[0] = '--check-auto-connect'
     begin
-      load "/bin/wifi_connect"
-    rescue => e
-      puts "wifi_connect failed: #{e.message} (#{e.class})"
+      load '/bin/wifi_connect'
     rescue Exception => e
       puts "wifi_connect failed: #{e.message} (#{e.class})"
     end
@@ -34,12 +32,12 @@ begin
 
   GC.start
 
-  if File.exist?("/home/app.mrb")
-    puts "Loading app.mrb"
-    load "/home/app.mrb"
-  elsif File.exist?("/home/app.rb")
-    puts "Loading app.rb"
-    load "/home/app.rb"
+  if File.exist?('/home/app.mrb')
+    puts 'Loading app.mrb'
+    load '/home/app.mrb'
+  elsif File.exist?('/home/app.rb')
+    puts 'Loading app.rb'
+    load '/home/app.rb'
   end
 
   GC.start
@@ -49,7 +47,7 @@ begin
 
   $shell.show_logo
   $shell.start
-rescue => e
+rescue StandardError => e
   puts "#{e.message} (#{e.class})"
 rescue Exception => e
   puts "FATAL: #{e.message} (#{e.class})"

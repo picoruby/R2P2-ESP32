@@ -81,7 +81,7 @@ You will need to set up a development environment if you want to:
 
 ### Prerequisites
 
-Set up your development environment using ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#installation). The build has been verified with ESP-IDF v5.5.
+The build runs in Docker by default (see [Build](#build)), so Docker and Ruby (to run `rake` on the host) are all you need. To build natively instead (see [Building Natively](#building-natively)), set up ESP-IDF by referring to [this page](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#installation). The build has been verified with ESP-IDF v5.5.
 
 ### Getting the Source
 
@@ -111,12 +111,107 @@ $ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console"
 $ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console;sdkconfigs/spiram"
 ```
 
+`sdkconfigs/spiram` is for Octal SPIRAM. Use `sdkconfigs/spiram_quad` instead for Quad SPIRAM such as M5Stack CoreS3 and M5Stack CoreS3 SE:
+
+```sh
+$ export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfigs/usb_console;sdkconfigs/spiram_quad"
+```
+
 Set the environment variable before running `rake setup_*` and `rake build`.
 If you change `SDKCONFIG_DEFAULTS`, delete the `sdkconfig` file and rebuild from scratch.
 
 ### Build
 
-Run the setup task for your target (first time only):
+By default, the build tasks (`setup_*`, `build`, `clean`, the QEMU tasks, ...) run inside a container
+-- no local ESP-IDF, Ruby or host toolchain needed -- based on the official [`espressif/idf`](https://hub.docker.com/r/espressif/idf) image,
+which already bundles ESP-IDF, `gcc`, and `ruby`. `docker/Dockerfile` adds the couple of packages
+that image is missing for a PicoRuby build (`ruby-dev`, `libssl-dev`) on top of it; these
+tasks build that image automatically the first time you use them. To build on the host with
+ESP-IDF instead, see [Building Natively](#building-natively).
+
+Requirements: Docker and the submodules checked out locally (`git submodule update --init
+--recursive`, see [Getting the Source](#getting-the-source)).
+
+The project directory is bind-mounted into the container, so your host's Docker file-sharing
+backend needs to handle symlinks correctly (it has to read and create files through the symlinks
+vendored under `components/picoruby-esp32/picoruby`). **On macOS, `virtiofs` must be enabled** --
+other backends (Docker Desktop's `gRPC FUSE`/`osxfs`, Rancher Desktop's `reverse-sshfs`/9p) fail
+with `Operation not permitted`.
+
+Each of these tasks runs its `native:` counterpart (`setup_esp32s3` → `rake native:setup_esp32s3`,
+`picoruby:build` → `rake native:picoruby:build`, etc.) inside the container, so it behaves like
+the native build:
+
+```sh
+# Setup (first time only)
+$ rake setup_esp32   # if you use esp32
+$ rake setup_esp32c3 # if you use esp32c3
+$ rake setup_esp32c6 # if you use esp32c6
+$ rake setup_esp32h2 # if you use esp32h2
+$ rake setup_esp32p4 # if you use esp32p4
+$ rake setup_esp32s3 # if you use esp32s3
+
+# Build
+$ rake build
+
+# Run on QEMU (ESP32-S3), no hardware required
+$ rake setup_qemu
+$ rake picoruby:qemu   # or femtoruby:qemu, qemu
+
+# Ad-hoc shell in the container
+$ rake docker:shell
+```
+
+PicoRuby currently supports two VMs. Run the build task for the one you want to use:
+
+```sh
+# PicoRuby (VM: mruby)
+$ rake picoruby:build
+
+# FemtoRuby (VM: mruby/c)
+$ rake femtoruby:build
+```
+
+See [Supported Devices](#supported-devices) for which VMs are available for each device.
+`rake` (`rake all`) builds, flashes and monitors in one go.
+
+Unlike the native build, these tasks only forward `SDKCONFIG_DEFAULTS` and `USE_WIFI` from your
+shell (when set); for any other variable -- or to keep them out of your shell -- put them in a gitignored `.env` file at the project root instead (they
+pass it to the container as-is if it exists). Docker's `--env-file` format doesn't strip quotes
+the way a shell does, so **don't quote the value**:
+
+```sh
+# .env
+SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfigs/usb_console
+```
+
+To use a different ESP-IDF patch version than the pinned default (`v5.5.4`, see `DOCKER_IDF_TAG` in
+`rakelib/docker.rake`), set `ESP_IDF_DOCKER_TAG` (any tag from the
+[image's tag list](https://hub.docker.com/r/espressif/idf/tags)):
+
+```sh
+$ export ESP_IDF_DOCKER_TAG=v5.5.5
+$ rake build
+```
+
+Gems (`bundle install`) and ccache output are cached in `.bundle-docker`/`.ccache` under the
+project root (gitignored) so they persist between runs. If you've also built natively on the host,
+these tasks automatically detect and rebuild a stale host-arch (e.g. macOS Mach-O) `mrbc` left
+under `components/picoruby-esp32/picoruby/build` -- otherwise it would look "already built" and
+fail to link with "file format not recognized". `rake docker:reset` clears the gem/ccache caches
+for a clean slate if they ever end up in a bad state.
+
+> **Note:** `rake flash`/`rake monitor` always run on the host, not in the container, because most container setups (e.g.
+> Docker Desktop, Rancher Desktop on macOS/Windows) can't pass the device's serial port through to
+> the container at all -- it's not a Dockerfile/CLI-flag issue, the port simply isn't visible
+> inside their Linux VM. They flash/monitor the image built by `rake build` from the host (see [Flash and Monitor](#flash-and-monitor)) -- these don't
+> need a full ESP-IDF install either. On native Linux, `docker run --device=/dev/ttyUSB0 ...` can
+> pass a serial device through if you want to flash from inside a container (`rake docker:shell`) too.
+
+### Building Natively
+
+To build on the host with a local ESP-IDF instead of Docker (see [Prerequisites](#prerequisites)),
+use the `native:` tasks. Activate ESP-IDF first:
 
 ```sh
 $ cd R2P2-ESP32
@@ -148,99 +243,19 @@ PATH_add "$IDF_PATH/tools"
 
 ```sh
 # Setup (first time only)
-$ rake setup_esp32   # if you use esp32
-$ rake setup_esp32c3 # if you use esp32c3
-$ rake setup_esp32c6 # if you use esp32c6
-$ rake setup_esp32h2 # if you use esp32h2
-$ rake setup_esp32p4 # if you use esp32p4
-$ rake setup_esp32s3 # if you use esp32s3
+$ rake native:setup_esp32   # if you use esp32
+$ rake native:setup_esp32c3 # if you use esp32c3
+$ rake native:setup_esp32c6 # if you use esp32c6
+$ rake native:setup_esp32h2 # if you use esp32h2
+$ rake native:setup_esp32p4 # if you use esp32p4
+$ rake native:setup_esp32s3 # if you use esp32s3
 
 # Build
-$ rake build
+$ rake native:build
 ```
 
-PicoRuby currently supports two VMs. Run the build task for the one you want to use:
-
-```sh
-# PicoRuby (VM: mruby)
-rake picoruby:build
-
-# FemtoRuby (VM: mruby/c)
-rake femtoruby:build
-```
-
-See [Supported Devices](#supported-devices) for which VMs are available for each device.
-
-### Building with Docker
-
-Instead of installing ESP-IDF, Ruby, and a host toolchain locally, you can build entirely inside
-a container based on the official [`espressif/idf`](https://hub.docker.com/r/espressif/idf) image,
-which already bundles ESP-IDF, `gcc`, and `ruby`. `docker/Dockerfile` adds the couple of packages
-that image is missing for a PicoRuby build (`ruby-dev`, `libssl-dev`) on top of it; `rake docker:*`
-tasks build that image automatically the first time you use them.
-
-Requirements: Docker and the submodules checked out locally (`git submodule update --init
---recursive`, see [Getting the Source](#getting-the-source)).
-
-The project directory is bind-mounted into the container, so your host's Docker file-sharing
-backend needs to handle symlinks correctly (it has to read and create files through the symlinks
-vendored under `components/picoruby-esp32/picoruby`). **On macOS, `virtiofs` must be enabled** --
-other backends (Docker Desktop's `gRPC FUSE`/`osxfs`, Rancher Desktop's `reverse-sshfs`/9p) fail
-with `Operation not permitted`.
-
-Every `docker:*` task runs the equivalently-named task (`docker:setup_esp32s3` → `rake
-setup_esp32s3`, `docker:picoruby:build` → `rake picoruby:build`, etc.) inside the container, so it
-behaves like the native build:
-
-```sh
-# Setup (first time only)
-$ rake docker:setup_esp32s3   # or docker:setup_esp32, docker:setup_esp32c3, ...
-
-# Build
-$ rake docker:build
-$ rake docker:picoruby:build  # or docker:femtoruby:build
-
-# Run on QEMU (ESP32-S3), no hardware required
-$ rake docker:setup_qemu
-$ rake docker:picoruby:qemu   # or docker:femtoruby:qemu, docker:qemu
-
-# Ad-hoc shell in the container
-$ rake docker:shell
-```
-
-Unlike the native build, `docker:*` tasks only forward `SDKCONFIG_DEFAULTS` and `USE_WIFI` from your
-shell (when set); for any other variable -- or to keep them out of your shell -- put them in a gitignored `.env` file at the project root instead (`docker:*` tasks
-pass it to the container as-is if it exists). Docker's `--env-file` format doesn't strip quotes
-the way a shell does, so **don't quote the value**:
-
-```sh
-# .env
-SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfigs/usb_console
-```
-
-To use a different ESP-IDF patch version than the pinned default (`v5.5.4`, see `DOCKER_IDF_TAG` in
-`rakelib/docker.rake`), set `ESP_IDF_DOCKER_TAG` (any tag from the
-[image's tag list](https://hub.docker.com/r/espressif/idf/tags)):
-
-```sh
-$ export ESP_IDF_DOCKER_TAG=v5.5.5
-$ rake docker:build
-```
-
-Gems (`bundle install`) and ccache output are cached in `.bundle-docker`/`.ccache` under the
-project root (gitignored) so they persist between runs. If you've also built natively on the host,
-`docker:*` tasks automatically detect and rebuild a stale host-arch (e.g. macOS Mach-O) `mrbc` left
-under `components/picoruby-esp32/picoruby/build` -- otherwise it would look "already built" and
-fail to link with "file format not recognized". `rake docker:reset` clears the gem/ccache caches
-for a clean slate if they ever end up in a bad state.
-
-> **Note:** There's no `docker:flash`/`docker:monitor` task, because most container setups (e.g.
-> Docker Desktop, Rancher Desktop on macOS/Windows) can't pass the device's serial port through to
-> the container at all -- it's not a Dockerfile/CLI-flag issue, the port simply isn't visible
-> inside their Linux VM. Flash/monitor the image built by `docker:build` from the host instead
-> with `rake flash`/`rake monitor` (see [Flash and Monitor](#flash-and-monitor)) -- these don't
-> need a full ESP-IDF install either. On native Linux, `docker run --device=/dev/ttyUSB0 ...` can
-> pass a serial device through if you want to flash from inside a container too.
+Likewise `native:picoruby:build` / `native:femtoruby:build`, `native:clean`, `native:setup_qemu`,
+`native:picoruby:qemu`, etc. `rake native:all` builds natively, flashes and monitors.
 
 ### Enabling WiFi (`USE_WIFI`)
 
@@ -271,15 +286,22 @@ DAP remote debugging over WiFi.
 
 ### Flash and Monitor
 
-`rake flash`/`rake monitor` call `esptool`/`esp-idf-monitor` (if already on `PATH`, e.g. via
-`pip install esptool esp-idf-monitor`) or [`espflash`](https://github.com/esp-rs/espflash)
-directly rather than `idf.py`, so they work from a `build/` produced by
-[Docker](#building-with-docker) too, without a full ESP-IDF install on the host.
+`rake flash`/`rake monitor` are implemented in plain Ruby by the [esp_flash](https://rubygems.org/gems/esp_flash)
+gem: besides the Ruby (3.2 or later) that runs `rake`, they need nothing but that gem -- no ESP-IDF,
+Python (esptool / esp-idf-monitor) or Rust (espflash) -- so they work from a `build/` produced by
+[Docker](#building-with-docker) too. They run on Linux and macOS; Windows support is untested.
+Install the gem once with the `Gemfile` of this repository:
 
-If esptool/esp-idf-monitor aren't already installed, these tasks use `espflash` instead -- a
-single binary with no Python or Rust/cargo dependency. The first `rake flash`/`monitor` run (or
-an explicit `rake setup_espflash`) looks for an `espflash` already on `PATH`, or downloads the
-matching prebuilt binary for your OS/CPU from its GitHub releases into `.tools/`.
+```sh
+$ bundle install
+```
+
+`rake flash` speaks the protocol of esptool: the board is reset into the download mode through
+DTR/RTS, the flasher stub of [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub)
+(bundled in the gem, MIT or Apache-2.0, the one esptool 5 uses) is loaded into the chip's RAM,
+the images are written compressed at 460800 baud (`FLASH_BAUD` changes it) and each is verified
+with an MD5 the chip computes. `NO_STUB=1` writes through the ROM loader instead, which is slower.
+If the board can't be reset automatically, hold BOOT while pressing RESET.
 
 Flash the built image to your device:
 
@@ -303,7 +325,15 @@ Open a serial terminal to connect to your device:
 $ rake monitor
 ```
 
-If the serial port isn't auto-detected correctly (e.g. multiple devices connected), set `PORT`:
+It resets the device first (`NO_RESET=1` attaches to it as it is) and passes every key through,
+Ctrl-C and the terminal's own replies included, so the shell's line editing and colors work.
+ESP-IDF log lines are colored by their level, as esp-idf-monitor does.
+Quit with `Ctrl-]`; `Ctrl-T Ctrl-R` resets the device. When the toolchain's `addr2line` is on
+`PATH`, a panic's backtrace is decoded with `build/R2P2-ESP32.elf`. `PORT=socket://127.0.0.1:5555`
+connects to [`rake qemu_serve`](#running-on-qemu-esp32-s3) instead.
+
+The serial port is detected automatically (`/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/cu.usbserial*`,
+`/dev/cu.usbmodem*`, ...; with several, you are asked which one). To pick it yourself, set `PORT`:
 
 ```sh
 $ PORT=/dev/tty.usbserial-0001 rake flash
@@ -337,7 +367,7 @@ $ PORT=/dev/ttyACM1 rake "picomodem:put[hello.rb]"
 
 ### Running on QEMU (ESP32-S3)
 
-R2P2-ESP32 can be run under [QEMU](https://github.com/espressif/qemu) targeting ESP32-S3, without any real hardware. This uses ESP-IDF's built-in `idf.py qemu` support and the `qemu-xtensa` tool package (`idf_tools.py install qemu-xtensa`).
+R2P2-ESP32 can be run under [QEMU](https://github.com/espressif/qemu) targeting ESP32-S3, without any real hardware. This uses ESP-IDF's built-in `idf.py qemu` support and the `qemu-xtensa` tool package, both of which the Docker image already has (for `native:` tasks, `idf_tools.py install qemu-xtensa`).
 
 Set up a separate build directory (`build-qemu`) once, targeting ESP32-S3 with a UART console (QEMU does not emulate the USB Serial/JTAG console):
 
@@ -356,8 +386,8 @@ $ rake qemu           # whichever VM is currently configured in build-qemu (defa
 This drops you into the `picoruby-shell` prompt over the emulated UART. Use `Ctrl-A X` to quit QEMU (`-nographic` mode).
 
 To expose the UART on a TCP port instead of the terminal (used by the [MCP server](mcp/README.md);
-`mon:stdio`'s Ctrl-A escape would corrupt binary transfers), run `rake qemu_serve`,
-`rake docker:qemu_serve` (add `picoruby:` / `femtoruby:` to pick the VM) and connect to
+`mon:stdio`'s Ctrl-A escape would corrupt binary transfers), run `rake qemu_serve`
+(`rake native:qemu_serve` on the host; add `picoruby:` / `femtoruby:` to pick the VM) and connect to
 `127.0.0.1:5555` (`QEMU_SERIAL_PORT` changes it), e.g. with `nc 127.0.0.1 5555`. It starts from a fresh
 `storage` image every time and stops with Ctrl-C.
 
@@ -379,7 +409,8 @@ The following devices have been confirmed to work:
 | M5Stamp C3 Mate | ESP32-C3 | FemtoRuby (mruby/c) | No | No |
 | ESPr® Developer S3 Type-C | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | No | Yes |
 | ATOMS3 Lite | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | No |
-| M5Stack CoreS3 | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | Yes |
+| M5Stack CoreS3 | ESP32-S3 | FemtoRuby (mruby/c), PicoRuby (mruby) | Yes | Yes (Quad) |
+| M5Stack CoreS3 SE | ESP32-S3 | PicoRuby (mruby) | Yes | Yes (Quad) |
 
 ## License
 

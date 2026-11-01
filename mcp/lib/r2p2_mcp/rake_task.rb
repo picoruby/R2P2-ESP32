@@ -2,7 +2,7 @@
 
 module R2p2Mcp
   # Builds the command line / environment for the repository's rake tasks.
-  # Docker is the default; `native: true` runs the plain task on the host.
+  # The build tasks run in Docker by default; `native: true` runs the `native:` one on the host.
   module RakeTask
     TARGETS = %w[esp32 esp32c3 esp32c6 esp32h2 esp32p4 esp32s3].freeze
     VMS = %w[picoruby femtoruby].freeze
@@ -10,7 +10,7 @@ module R2p2Mcp
     module_function
 
     def command(task, native: false)
-      ['rake', native ? task : "docker:#{task}"]
+      ['rake', native ? "native:#{task}" : task]
     end
 
     # Environment read by CMake / the rake tasks. `sdkconfigs` are names of

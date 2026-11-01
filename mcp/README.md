@@ -16,8 +16,9 @@ transfer), and try things without hardware on QEMU, plus manage mrbgems.
 
 ## Install
 
+The gems are declared in the `Gemfile` at the repository root:
+
 ```sh
-cd mcp
 bundle install
 ```
 
@@ -40,7 +41,7 @@ claude mcp add r2p2-esp32 -- /path/to/R2P2-ESP32/mcp/bin/r2p2-esp32-mcp
 
 `setup`, `build`, `clean` and `flash` run the rake task as a job and **wait for it** (`timeout`,
 default 300 s; `0` returns at once). If it takes longer it keeps running and the call says so: follow
-it with `job_wait`. Only one job runs at a time. Everything runs in Docker (`rake docker:*`) unless
+it with `job_wait`. Only one job runs at a time. Everything runs in Docker (the default rake tasks) unless
 `native: true` is passed.
 
 | tool | arguments | what it does |
@@ -134,6 +135,5 @@ Steps 1 to 3 return when the job is done (see `job_wait` for one that outlasts `
 ## Development
 
 ```sh
-cd mcp
-bundle exec rubocop   # style check; config in .rubocop.yml (defaults + NewCops)
+bundle exec rubocop mcp   # style check; config in ../.rubocop.yml (defaults + NewCops)
 ```

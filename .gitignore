@@ -17,4 +17,5 @@ managed_components/*
 .ccache
 .tools
 *.local.md
+.bundle
 mcp/.bundle

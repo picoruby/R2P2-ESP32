@@ -45,7 +45,7 @@ module R2p2Mcp
 
           result = device_call do
             Device.transfer("put #{remote_path}") do |pty|
-              CommandRunner.run(RakeTask.command("picomodem:put[#{local_path},#{remote_path}]", native: true),
+              CommandRunner.run(RakeTask.command("picomodem:put[#{local_path},#{remote_path}]"),
                                 env: { 'PORT' => pty })
             end
           end
