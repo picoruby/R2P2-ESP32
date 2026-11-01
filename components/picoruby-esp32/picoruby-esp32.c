@@ -40,7 +40,7 @@ uint8_t heap_pool[HEAP_SIZE];
 #endif
 
 #ifndef PICORB_TASK_STACK_SIZE
-#define PICORB_TASK_STACK_SIZE (1024 * 8)
+#define PICORB_TASK_STACK_SIZE (1024 * 32)
 #endif
 
 #if defined(PICORB_VM_MRUBY)
@@ -136,7 +136,7 @@ picoruby_esp32_task(void *pvParameters)
 void
 picoruby_esp32(void)
 {
-  xTaskCreatePinnedToCore(
+  BaseType_t ret = xTaskCreatePinnedToCore(
     picoruby_esp32_task,
     "picoruby_task",
     PICORB_TASK_STACK_SIZE,
@@ -145,4 +145,7 @@ picoruby_esp32(void)
     NULL,
     ESP_TASK_MAIN_CORE
   );
+  if (ret != pdPASS) {
+    printf("Failed to create picoruby_task (stack size: %d bytes)\n", PICORB_TASK_STACK_SIZE);
+  }
 }
