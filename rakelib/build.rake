@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 # Runs on the host with ESP-IDF; the task of the same name without `native:` runs it in Docker
 # (rakelib/docker.rake).
 namespace :native do
-  desc "Build the ESP32 project"
+  desc 'Build the ESP32 project'
   task :build do
-    sh "idf.py build"
+    sh 'idf.py build'
     preinstall_system_files
   end
 

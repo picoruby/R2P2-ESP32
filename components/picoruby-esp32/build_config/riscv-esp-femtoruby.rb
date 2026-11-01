@@ -1,28 +1,28 @@
-MRuby::CrossBuild.new("esp32-femtoruby") do |conf|
-  conf.toolchain("gcc")
+MRuby::CrossBuild.new('esp32-femtoruby') do |conf|
+  conf.toolchain('gcc')
 
-  conf.cc.command = "riscv32-esp-elf-gcc"
-  conf.linker.command = "riscv32-esp-elf-ld"
-  conf.archiver.command = "riscv32-esp-elf-ar"
+  conf.cc.command = 'riscv32-esp-elf-gcc'
+  conf.linker.command = 'riscv32-esp-elf-ld'
+  conf.archiver.command = 'riscv32-esp-elf-ar'
 
-  conf.cc.host_command = "gcc"
-  conf.cc.flags << "-Wall"
-  conf.cc.flags << "-Wno-format"
-  conf.cc.flags << "-Wno-unused-function"
-  conf.cc.flags << "-Wno-maybe-uninitialized"
-  conf.cc.flags << "-mabi=ilp32f" if %w[esp32p4].include? ENV['CONFIG_IDF_TARGET']
+  conf.cc.host_command = 'gcc'
+  conf.cc.flags << '-Wall'
+  conf.cc.flags << '-Wno-format'
+  conf.cc.flags << '-Wno-unused-function'
+  conf.cc.flags << '-Wno-maybe-uninitialized'
+  conf.cc.flags << '-mabi=ilp32f' if %w[esp32p4].include? ENV['CONFIG_IDF_TARGET']
 
-  conf.cc.defines << "MRBC_TICK_UNIT=10"
-  conf.cc.defines << "MRBC_TIMESLICE_TICK_COUNT=1"
-  conf.cc.defines << "MRBC_USE_FLOAT=2"
-  conf.cc.defines << "MRBC_CONVERT_CRLF=1"
-  conf.cc.defines << "USE_FAT_FLASH_DISK"
-  conf.cc.defines << "PICORB_PLATFORM_ESP32"
-  conf.cc.defines << "PICORB_INT64"
-  conf.cc.defines << "NDEBUG"
-  conf.cc.defines << "PM_ARENA_INITIAL_SIZE=2048"
-  conf.cc.defines << "PM_CONSTANT_POOL_MIN_CAPACITY=128"
-  conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
+  conf.cc.defines << 'MRBC_TICK_UNIT=10'
+  conf.cc.defines << 'MRBC_TIMESLICE_TICK_COUNT=1'
+  conf.cc.defines << 'MRBC_USE_FLOAT=2'
+  conf.cc.defines << 'MRBC_CONVERT_CRLF=1'
+  conf.cc.defines << 'USE_FAT_FLASH_DISK'
+  conf.cc.defines << 'PICORB_PLATFORM_ESP32'
+  conf.cc.defines << 'PICORB_INT64'
+  conf.cc.defines << 'NDEBUG'
+  conf.cc.defines << 'PM_ARENA_INITIAL_SIZE=2048'
+  conf.cc.defines << 'PM_CONSTANT_POOL_MIN_CAPACITY=128'
+  conf.cc.defines << 'USE_WIFI' if ENV['USE_WIFI']
 
   conf.femtoruby(alloc_libc: false)
   conf.gembox 'minimum'

@@ -1,13 +1,15 @@
+# frozen_string_literal: true
+
 # Locate a host (non-cross) toolchain command. ESP-IDF's activation script
 # prepends its cross toolchains to PATH, so resolve the command against PATH
 # entries outside the ESP-IDF installation. HOST_CC / HOST_AR override the
 # detection.
 def find_host_tool(*names)
-  override = ENV["HOST_#{names.first.upcase}"]
+  override = ENV.fetch("HOST_#{names.first.upcase}", nil)
   return override if override
 
   host_path = ENV['PATH'].split(File::PATH_SEPARATOR)
-                         .reject { |dir| dir.match?(/\.espressif|esp-idf/) }
+                         .grep_v(/\.espressif|esp-idf/)
   names.each do |name|
     host_path.each do |dir|
       candidate = File.join(dir, name)
@@ -20,15 +22,15 @@ end
 # Runs on the host with ESP-IDF; the task of the same name without `native:` runs it in Docker
 # (rakelib/docker.rake).
 namespace :native do
-  desc "Install dependencies and build mruby"
+  desc 'Install dependencies and build mruby'
   task :setup do
     host_env = {
       'CC' => find_host_tool('cc', 'gcc', 'clang'),
       'AR' => find_host_tool('ar')
     }
     FileUtils.cd MRUBY_ROOT do
-      sh "bundle install"
-      sh host_env, "rake"
+      sh 'bundle install'
+      sh host_env, 'rake'
     end
   end
 
