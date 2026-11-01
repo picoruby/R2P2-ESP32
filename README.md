@@ -290,10 +290,10 @@ DAP remote debugging over WiFi.
 gem: besides the Ruby (3.2 or later) that runs `rake`, they need nothing but that gem -- no ESP-IDF,
 Python (esptool / esp-idf-monitor) or Rust (espflash) -- so they work from a `build/` produced by
 [Docker](#building-with-docker) too. They run on Linux and macOS; Windows support is untested.
-Install the gem once:
+Install the gem once with the `Gemfile` of this repository:
 
 ```sh
-$ gem install esp_flash
+$ bundle install
 ```
 
 `rake flash` speaks the protocol of esptool: the board is reset into the download mode through

@@ -19,7 +19,7 @@ task :esp_flash do
   gem "esp_flash", ESP_FLASH_VERSION
   require "esp_flash"
 rescue LoadError
-  abort "Error: this task needs the esp_flash gem: gem install esp_flash -v '#{ESP_FLASH_VERSION}'"
+  abort "Error: this task needs the esp_flash gem: run `bundle install`"
 end
 
 # Arguments selecting the serial port given by ENV['PORT'] (none when unset, so that the tool
