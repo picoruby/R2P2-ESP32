@@ -4,7 +4,7 @@
 # Starts the MCP server. stdout carries the MCP protocol, so problems are reported on stderr.
 
 MCP_DIR = File.expand_path('..', __dir__)
-ENV['BUNDLE_GEMFILE'] ||= File.join(MCP_DIR, 'Gemfile')
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', MCP_DIR)
 
 def abort_with_setup_hint(reason)
   warn <<~MESSAGE
@@ -12,7 +12,7 @@ def abort_with_setup_hint(reason)
 
     Install the gems it needs once (with the same Ruby the MCP client starts), then restart the server:
 
-      cd #{MCP_DIR} && bundle install
+      cd #{File.dirname(ENV.fetch('BUNDLE_GEMFILE'))} && bundle install
 
     Ruby in use: #{RUBY_VERSION} (#{RbConfig.ruby})
     Details: #{File.join(MCP_DIR, 'README.md')}
