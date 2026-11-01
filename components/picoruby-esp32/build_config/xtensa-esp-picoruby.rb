@@ -1,9 +1,9 @@
 MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.toolchain('gcc')
 
-  conf.cc.command = "xtensa-#{ENV['CONFIG_IDF_TARGET']}-elf-gcc"
-  conf.linker.command = "xtensa-#{ENV['CONFIG_IDF_TARGET']}-elf-ld"
-  conf.archiver.command = "xtensa-#{ENV['CONFIG_IDF_TARGET']}-elf-ar"
+  conf.cc.command = "xtensa-#{ENV.fetch('CONFIG_IDF_TARGET', nil)}-elf-gcc"
+  conf.linker.command = "xtensa-#{ENV.fetch('CONFIG_IDF_TARGET', nil)}-elf-ld"
+  conf.archiver.command = "xtensa-#{ENV.fetch('CONFIG_IDF_TARGET', nil)}-elf-ar"
 
   conf.cc.host_command = 'gcc'
   conf.cc.flags << '-Wall'
@@ -25,10 +25,10 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.cc.defines << 'PICORB_ALLOC_ALIGN=8'
   conf.cc.defines << 'USE_FAT_FLASH_DISK'
   conf.cc.defines << 'NDEBUG'
-  conf.cc.defines << "PICORB_PLATFORM_ESP32"
-  conf.cc.defines << "PM_ARENA_INITIAL_SIZE=2048"
-  conf.cc.defines << "PM_CONSTANT_POOL_MIN_CAPACITY=128"
-  conf.cc.defines << "USE_WIFI" if ENV['USE_WIFI']
+  conf.cc.defines << 'PICORB_PLATFORM_ESP32'
+  conf.cc.defines << 'PM_ARENA_INITIAL_SIZE=2048'
+  conf.cc.defines << 'PM_CONSTANT_POOL_MIN_CAPACITY=128'
+  conf.cc.defines << 'USE_WIFI' if ENV['USE_WIFI']
 
   if ENV['PICORB_DEBUG']
     conf.cc.defines << 'ESTALLOC_DEBUG'
@@ -48,9 +48,9 @@ MRuby::CrossBuild.new('esp32-picoruby') do |conf|
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-sprintf'
   conf.gem gemdir: '../picoruby/mrbgems/picoruby-mruby/lib/mruby/mrbgems/mruby-math'
   conf.gem core: 'picoruby-esp32'
-  conf.gem core: "picoruby-shell"
-  conf.gem core: "picoruby-picoline"
-  conf.gem core: "picoruby-vim"
+  conf.gem core: 'picoruby-shell'
+  conf.gem core: 'picoruby-picoline'
+  conf.gem core: 'picoruby-vim'
 
   # stdlib
   conf.gem core: 'picoruby-rng'
